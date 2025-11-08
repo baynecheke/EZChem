@@ -3,53 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molecule Sketchpad (Frontend)</title>
-    <!-- Load Tailwind CSS -->
+    <title>Molecule Sketchpad V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles */
         body, html {
             font-family: 'Inter', sans-serif;
-            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior: none;
+            background-color: #f3f4f6; /* bg-gray-100 */
         }
         canvas {
-            touch-action: none; /* Disables browser gestures like pan/zoom on the canvas */
+            touch-action: none;
             cursor: crosshair;
+            display: block;
         }
         .tool-btn.active {
-            @apply bg-indigo-600 text-white;
+            @apply bg-indigo-600 text-white shadow-inner;
         }
+        .tool-btn:not(.active) {
+            @apply hover:bg-gray-200;
+        }
+        /* Hide scrollbars for search results */
+        #search-results::-webkit-scrollbar { display: none; }
+        #search-results { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-100 h-full flex flex-col antialiased">
+<body class="h-full flex flex-col antialiased">
 
-    <div class="bg-gray-800 text-white p-4 shadow-md">
-        <h1 class="text-xl font-bold text-center">Molecule Sketchpad V2 (Frontend)</h1>
+    <!-- Top Bar with Search -->
+    <div class="bg-gray-800 text-white p-2 shadow-md flex items-center gap-4">
+        <h1 class="text-xl font-bold text-center">EZChem</h1>
+        <!-- Search Wrapper -->
+        <div class="relative flex-1 max-w-md mx-auto">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" id="search-input" placeholder="Search atoms (e.g., 'Iron', 'Fe', '26')" class="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <!-- Search Results Dropdown -->
+            <div id="search-results" class="absolute z-50 w-full bg-white text-black rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                <!-- Results will be injected by JS -->
+            </div>
+        </div>
     </div>
 
     <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 h-full min-h-0">
+    <div class="flex-1 flex flex-row p-4 gap-4 h-full min-h-0">
 
-        <!-- Toolbar -->
-        <div class="flex flex-row md:flex-col justify-center items-center bg-white p-4 rounded-lg shadow-lg flex-wrap gap-3 md:gap-4">
-            <h2 class="text-lg font-semibold w-full text-center hidden md:block">Atoms</h2>
+        <!-- Toolbar (New Compact Version) -->
+        <div class="flex flex-col items-center bg-white p-2 rounded-lg shadow-lg gap-2 w-20">
+            <!-- === FIX: Corrected 'font.semibold' to 'font-semibold' === -->
+            <h2 class="text-sm font-semibold text-center text-gray-600">Atoms</h2>
             
             <!-- Atom Tools -->
-            <button id="tool-C" class="tool-btn active size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="C">C</button>
-            <button id="tool-H" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="H">H</button>
-            <button id="tool-O" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="O">O</button>
-            <button id="tool-N" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="N">N</button>
+            <button id="tool-C" class="tool-btn active w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="C">C</button>
+            <button id="tool-H" class="tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="H">H</button>
+            <button id="tool-O" class="tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="O">O</button>
+            <button id="tool-N" class="tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="N">N</button>
             
             <div class="w-full border-t border-gray-200 my-2"></div>
-            <h2 class="text-lg font-semibold w-full text-center hidden md:block">Actions</h2>
+            <h2 class="text-sm font-semibold text-center text-gray-600">Actions</h2>
+
+            <!-- Info Tool (NEW) -->
+            <button id="tool-info" class="tool-btn w-full h-16 rounded-lg bg-blue-500 text-white p-2 shadow-md flex items-center justify-center" title="Info Tool">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
 
             <!-- AI Predict Button -->
-            <button id="tool-predict" class="relative flex items-center justify-center h-14 w-full md:w-14 rounded-lg bg-green-500 text-white p-2 shadow-md hover:bg-green-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <button id="tool-predict" class="tool-btn relative w-full h-16 rounded-lg bg-green-500 text-white p-2 shadow-md flex items-center justify-center" title="Predict Bonds">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M12 21v-1m0-10c-1.657 0-3 2.239-3 5s1.343 5 3 5 3-2.239 3-5-1.343-5-3-5z" />
                 </svg>
-                <span class="md:hidden ml-2">Predict Bonds</span>
-                <!-- Loading Spinner -->
                 <div id="loading-spinner" class="absolute inset-0 bg-green-500 bg-opacity-80 flex items-center justify-center rounded-lg hidden">
                     <svg class="animate-spin size-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -59,69 +85,137 @@
             </button>
             
             <!-- Clear Button -->
-            <button id="tool-clear" class="flex items-center justify-center h-14 w-full md:w-14 rounded-lg bg-red-500 text-white p-2 shadow-md hover:bg-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <button id="tool-clear" class="tool-btn w-full h-16 rounded-lg bg-red-500 text-white p-2 shadow-md flex items-center justify-center" title="Clear Canvas">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span class="md:hidden ml-2">Clear Canvas</span>
             </button>
         </div>
 
         <!-- Drawing Canvas -->
-        <div class="flex-1 bg-white rounded-lg shadow-lg h-[60vh] md:h-auto overflow-hidden">
-            <canvas id="sketchpad" class="w-full h-full"></canvas>
+        <div class="flex-1 bg-white rounded-lg shadow-lg h-full overflow-hidden">
+            <canvas id="sketchpad"></canvas>
         </div>
 
     </div>
 
     <!-- Info Message Box -->
-    <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden">
+    <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden z-50">
         <span id="message-text"></span>
     </div>
 
+    <!-- Atom Info Modal (NEW) -->
+    <div id="atom-info-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold" id="modal-atom-name">Element Info</h2>
+                <button id="modal-close-btn" class="text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-2">
+                <p><strong>Atom ID:</strong> <span id="modal-atom-id"></span></p>
+                <p><strong>Element:</strong> <span id="modal-atom-element"></span></p>
+                <p><strong>Bonds:</strong> <span id="modal-atom-bonds"></span></p>
+            </div>
+            <div class="mt-4 pt-4 border-t">
+                <h3 class="font-semibold mb-2">Fun Fact</h3>
+                <div id="modal-fun-fact-box" class="bg-gray-100 p-3 rounded-lg min-h-[6rem] text-gray-700 italic">
+                    <span id="modal-fun-fact-text">Click the button to get a fun fact!</span>
+                </div>
+                <button id="modal-fun-fact-btn" class="w-full bg-indigo-600 text-white p-2 rounded-lg mt-3 hover:bg-indigo-700">
+                    Get Fun Fact
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- Periodic Table Data (1-100) ---
+        const PERIODIC_TABLE = [
+            { n: 1, s: "H", name: "Hydrogen" }, { n: 2, s: "He", name: "Helium" }, { n: 3, s: "Li", name: "Lithium" }, { n: 4, s: "Be", name: "Beryllium" },
+            { n: 5, s: "B", name: "Boron" }, { n: 6, s: "C", name: "Carbon" }, { n: 7, s: "N", name: "Nitrogen" }, { n: 8, s: "O", name: "Oxygen" },
+            { n: 9, s: "F", name: "Fluorine" }, { n: 10, s: "Ne", name: "Neon" }, { n: 11, s: "Na", name: "Sodium" }, { n: 12, s: "Mg", name: "Magnesium" },
+            { n: 13, s: "Al", name: "Aluminum" }, { n: 14, s: "Si", name: "Silicon" }, { n: 15, s: "P", name: "Phosphorus" }, { n: 16, s: "S", name: "Sulfur" },
+            { n: 17, s: "Cl", name: "Chlorine" }, { n: 18, s: "Ar", name: "Argon" }, { n: 19, s: "K", name: "Potassium" }, { n: 20, s: "Ca", name: "Calcium" },
+            { n: 21, s: "Sc", name: "Scandium" }, { n: 22, s: "Ti", name: "Titanium" }, { n: 23, s: "V", name: "Vanadium" }, { n: 24, s: "Cr", name: "Chromium" },
+            { n: 25, s: "Mn", name: "Manganese" }, { n: 26, s: "Fe", name: "Iron" }, { n: 27, s: "Co", name: "Cobalt" }, { n: 28, s: "Ni", name: "Nickel" },
+            { n: 29, s: "Cu", name: "Copper" }, { n: 30, s: "Zn", name: "Zinc" }, { n: 31, s: "Ga", name: "Gallium" }, { n: 32, s: "Ge", name: "Germanium" },
+            { n: 33, s: "As", name: "Arsenic" }, { n: 34, s: "Se", name: "Selenium" }, { n: 35, s: "Br", name: "Bromine" }, { n: 36, s: "Kr", name: "Krypton" },
+            { n: 37, s: "Rb", name: "Rubidium" }, { n: 38, s: "Sr", name: "Strontium" }, { n: 39, s: "Y", name: "Yttrium" }, { n: 40, s: "Zr", name: "Zirconium" },
+            { n: 41, s: "Nb", name: "Niobium" }, { n: 42, s: "Mo", name: "Molybdenum" }, { n: 43, s: "Tc", name: "Technetium" }, { n: 44, s: "Ru", name: "Ruthenium" },
+            { n: 45, s: "Rh", name: "Rhodium" }, { n: 46, s: "Pd", name: "Palladium" }, { n: 47, s: "Ag", name: "Silver" }, { n: 48, s: "Cd", name: "Cadmium" },
+            { n: 49, s: "In", name: "Indium" }, { n: 50, s: "Sn", name: "Tin" }, { n: 51, s: "Sb", name: "Antimony" }, { n: 52, s: "Te", name: "Tellurium" },
+            { n: 53, s: "I", name: "Iodine" }, { n: 54, s: "Xe", name: "Xenon" }, { n: 55, s: "Cs", name: "Caesium" }, { n: 56, s: "Ba", name: "Barium" },
+            { n: 57, s: "La", name: "Lanthanum" }, { n: 58, s: "Ce", name: "Cerium" }, { n: 59, s: "Pr", name: "Praseodymium" }, { n: 60, s: "Nd", name: "Neodymium" },
+            { n: 61, s: "Pm", name: "Promethium" }, { n: 62, s: "Sm", name: "Samarium" }, { n: 63, s: "Eu", name: "Europium" }, { n: 64, s: "Gd", name: "Gadolinium" },
+            { n: 65, s: "Tb", name: "Terbium" }, { n: 66, s: "Dy", name: "Dysprosium" }, { n: 67, s: "Ho", name: "Holmium" }, { n: 68, s: "Er", name: "Erbium" },
+            { n: 69, s: "Tm", name: "Thulium" }, { n: 70, s: "Yb", name: "Ytterbium" }, { n: 71, s: "Lu", name: "Lutetium" }, { n: 72, s: "Hf", name: "Hafnium" },
+            { n: 73, s: "Ta", name: "Tantalum" }, { n: 74, s: "W", name: "Tungsten" }, { n: 75, s: "Re", name: "Rhenium" }, { n: 76, s: "Os", name: "Osmium" },
+            { n: 77, s: "Ir", name: "Iridium" }, { n: 78, s: "Pt", name: "Platinum" }, { n: 79, s: "Au", name: "Gold" }, { n: 80, s: "Hg", name: "Mercury" },
+            { n: 81, s: "Tl", name: "Thallium" }, { n: 82, s: "Pb", name: "Lead" }, { n: 83, s: "Bi", name: "Bismuth" }, { n: 84, s: "Po", name: "Polonium" },
+            { n: 85, s: "At", name: "Astatine" }, { n: 86, s: "Rn", name: "Radon" }, { n: 87, s: "Fr", name: "Francium" }, { n: 88, s: "Ra", name: "Radium" },
+            { n: 89, s: "Ac", name: "Actinium" }, { n: 90, s: "Th", name: "Thorium" }, { n: 91, s: "Pa", name: "Protactinium" }, { n: 92, s: "U", name: "Uranium" },
+            { n: 93, s: "Np", name: "Neptunium" }, { n: 94, s: "Pu", name: "Plutonium" }, { n: 95, s: "Am", name: "Americium" }, { n: 96, s: "Cm", name: "Curium" },
+            { n: 97, s: "Bk", name: "Berkelium" }, { n: 98, s: "Cf", name: "Californium" }, { n: 99, s: "Es", name: "Einsteinium" }, { n: 100, s: "Fm", name: "Fermium" }
+        ];
+
         document.addEventListener('DOMContentLoaded', () => {
             const canvas = document.getElementById('sketchpad');
             const ctx = canvas.getContext('2d');
             
-            // App State
+            // --- App State ---
             let atoms = []; // { id, x, y, element, radius }
             let bonds = []; // { atom1_id, atom2_id }
-            let activeElement = 'C'; // Default tool
+            let activeTool = 'C'; // Default tool, can be 'C', 'H', 'info'
             let nextAtomId = 0;
             const ATOM_RADIUS = 20;
 
-            // Dragging State
-            let isDragging = false;
+            // --- Canvas Transform State (NEW) ---
+            let scale = 1;
+            let panX = 0;
+            let panY = 0;
+            let isPanning = false;
+            let lastPanPos = { x: 0, y: 0 }; // === FIX: Added for touch panning ===
+
+            // --- Dragging State ---
+            let isDraggingAtom = false;
             let draggedAtomIndex = -1;
             
-            // Atom colors (CPK convention)
-            const ATOM_COLORS = {
-                'C': '#333333', // Dark Gray
-                'H': '#CCCCCC', // Light Gray
-                'O': '#FF0D0D', // Red
-                'N': '#3050F8', // Blue
-                'DEFAULT': '#888888'
-            };
+            // --- Atom colors (CPK) ---
+            const ATOM_COLORS = { 'C': '#333333', 'H': '#CCCCCC', 'O': '#FF0D0D', 'N': '#3050F8', /* ... add more colors ... */ 'DEFAULT': '#888888' };
             
-            // UI Elements
+            // --- UI Elements ---
             const loadingSpinner = document.getElementById('loading-spinner');
             const messageBox = document.getElementById('message-box');
             const messageText = document.getElementById('message-text');
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            const atomInfoModal = document.getElementById('atom-info-modal');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalFunFactBtn = document.getElementById('modal-fun-fact-btn');
+            const modalFunFactText = document.getElementById('modal-fun-fact-text');
 
             // --- Canvas Setup ---
             function resizeCanvas() {
                 const parent = canvas.parentElement;
                 canvas.width = parent.clientWidth;
                 canvas.height = parent.clientHeight;
-                drawCanvas(); // Redraw everything on resize
+                drawCanvas(); 
             }
 
             // --- Drawing Functions ---
             function drawCanvas() {
+                ctx.save();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                // 1. Draw Bonds (so atoms are on top)
+                // Apply pan and zoom
+                ctx.translate(panX, panY);
+                ctx.scale(scale, scale);
+
+                // 1. Draw Bonds
                 ctx.strokeStyle = '#666666';
                 ctx.lineWidth = 4;
                 bonds.forEach(bond => {
@@ -139,29 +233,37 @@
                 atoms.forEach(atom => {
                     ctx.beginPath();
                     ctx.arc(atom.x, atom.y, atom.radius, 0, 2 * Math.PI);
-                    ctx.fillStyle = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
+                    const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
+                    ctx.fillStyle = color;
                     ctx.fill();
                     
-                    ctx.fillStyle = (atom.element === 'C' || atom.element === 'N') ? '#FFFFFF' : '#000000';
-                    ctx.font = 'bold 18px Inter';
+                    ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
+                    ctx.font = `bold ${18 / scale}px Inter`; // Scale font size
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(atom.element, atom.x, atom.y);
                 });
+                
+                ctx.restore();
             }
 
-            // --- Helper Functions ---
+            // --- Coordinate Helper (NEW) ---
             function getMousePos(evt) {
                 const rect = canvas.getBoundingClientRect();
-                const clientX = evt.clientX ?? evt.touches[0]?.clientX;
-                const clientY = evt.clientY ?? evt.touches[0]?.clientY;
-                return { x: clientX - rect.left, y: clientY - rect.top };
+                const clientX = evt.clientX ?? evt.touches[0]?.clientX ?? evt.changedTouches?.[0]?.clientX;
+                const clientY = evt.clientY ?? evt.touches[0]?.clientY ?? evt.changedTouches?.[0]?.clientY;
+                
+                // Convert screen coords to canvas world coords
+                const worldX = (clientX - rect.left - panX) / scale;
+                const worldY = (clientY - rect.top - panY) / scale;
+                
+                return { x: worldX, y: worldY, clientX, clientY };
             }
             
-            function getAtomAt(x, y) {
+            function getAtomAt(worldX, worldY) {
                 for (let i = atoms.length - 1; i >= 0; i--) {
                     const atom = atoms[i];
-                    const dist = Math.sqrt((x - atom.x) ** 2 + (y - atom.y) ** 2);
+                    const dist = Math.sqrt((worldX - atom.x) ** 2 + (worldY - atom.y) ** 2);
                     if (dist < atom.radius) {
                         return i;
                     }
@@ -175,39 +277,50 @@
                 const id2 = atoms[atom2_idx].id;
                 const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
                 if (!bondExists) {
-                    bonds.push({ atom1_id: id1, atom2_id: id2 });
+                    bonds.push({ atom1_id: id1, atom2_id: id2, type: "SINGLE" });
                 }
             }
             
-            function setLoading(isLoading) {
-                loadingSpinner.classList.toggle('hidden', !isLoading);
-            }
-            
+            // --- UI Helpers ---
+            function setLoading(isLoading) { loadingSpinner.classList.toggle('hidden', !isLoading); }
             function showMessage(text, isError = true) {
                 messageText.innerText = text;
                 messageBox.classList.toggle('bg-red-500', isError);
                 messageBox.classList.toggle('bg-green-500', !isError);
                 messageBox.classList.remove('hidden');
-                setTimeout(() => {
-                    messageBox.classList.add('hidden');
-                }, 3000);
+                setTimeout(() => { messageBox.classList.add('hidden'); }, 3000);
             }
 
-            // --- Event Handlers ---
+            // --- Event Handlers (Updated for Pan/Zoom) ---
             function handleStart(evt) {
                 evt.preventDefault();
                 const pos = getMousePos(evt);
+                
+                if (evt.button === 2 || (evt.touches && evt.touches.length === 2)) { // Right-click or 2-finger touch for pan
+                    isPanning = true;
+                    // === FIX: Store initial pan position for touch ===
+                    lastPanPos = { x: pos.clientX, y: pos.clientY };
+                    return;
+                }
+
                 const clickedAtomIndex = getAtomAt(pos.x, pos.y);
                 
+                if (activeTool === 'info') {
+                    if (clickedAtomIndex !== -1) {
+                        openAtomInfoModal(atoms[clickedAtomIndex]);
+                    }
+                    return;
+                }
+                
                 if (clickedAtomIndex !== -1) {
-                    isDragging = true;
+                    isDraggingAtom = true;
                     draggedAtomIndex = clickedAtomIndex;
                 } else {
                     const newAtom = {
                         id: nextAtomId++,
                         x: pos.x,
                         y: pos.y,
-                        element: activeElement,
+                        element: activeTool,
                         radius: ATOM_RADIUS
                     };
                     atoms.push(newAtom);
@@ -216,9 +329,21 @@
             }
 
             function handleMove(evt) {
-                if (!isDragging) return;
                 evt.preventDefault();
                 const pos = getMousePos(evt);
+
+                if (isPanning) {
+                    // === FIX: Universal pan logic for mouse/touch ===
+                    const deltaX = pos.clientX - lastPanPos.x;
+                    const deltaY = pos.clientY - lastPanPos.y;
+                    panX += deltaX;
+                    panY += deltaY;
+                    lastPanPos = { x: pos.clientX, y: pos.clientY }; // Update last pos
+                    drawCanvas();
+                    return;
+                }
+                
+                if (!isDraggingAtom) return;
                 atoms[draggedAtomIndex].x = pos.x;
                 atoms[draggedAtomIndex].y = pos.y;
                 drawCanvas();
@@ -226,9 +351,15 @@
 
             function handleEnd(evt) {
                 evt.preventDefault();
-                if (!isDragging) return;
                 
-                const pos = getMousePos(evt.changedTouches ? evt.changedTouches[0] : evt);
+                if (isPanning) {
+                    isPanning = false;
+                    return;
+                }
+                
+                if (!isDraggingAtom) return;
+                
+                const pos = getMousePos(evt); // Use getMousePos on 'evt' (which handles changedTouches)
                 const releasedOnAtomIndex = getAtomAt(pos.x, pos.y);
                 
                 if (releasedOnAtomIndex !== -1 && releasedOnAtomIndex !== draggedAtomIndex) {
@@ -238,45 +369,188 @@
                     atoms[draggedAtomIndex].y = pos.y;
                 }
 
-                isDragging = false;
+                isDraggingAtom = false;
                 draggedAtomIndex = -1;
+                drawCanvas();
+            }
+
+            function handleWheel(evt) {
+                evt.preventDefault();
+                const pos = getMousePos(evt);
+                // === FIX: Get rect inside the handler ===
+                const rect = canvas.getBoundingClientRect(); 
+                
+                const zoomFactor = 0.1;
+                const wheel = evt.deltaY < 0 ? 1 : -1;
+                const newScale = Math.max(0.2, Math.min(scale + wheel * zoomFactor * scale, 5));
+                
+                // Pan so that the mouse point stays in the same world location
+                panX = panX - (pos.clientX - rect.left - panX) * (newScale / scale - 1);
+                panY = panY - (pos.clientY - rect.top - panY) * (newScale / scale - 1);
+                
+                scale = newScale;
                 drawCanvas();
             }
             
             // --- Toolbar Listeners ---
-            const toolButtons = document.querySelectorAll('.tool-btn[data-atom]');
-            toolButtons.forEach(btn => {
+            document.querySelectorAll('.tool-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    toolButtons.forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
-                    btn.classList.add('active', 'bg-indigo-600', 'text-white');
-                    activeElement = btn.dataset.atom;
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    if (btn.dataset.atom) {
+                        activeTool = btn.dataset.atom;
+                    } else if (btn.id === 'tool-info') {
+                        activeTool = 'info';
+                    } else {
+                        // Handle predict/clear
+                        if (btn.id === 'tool-predict') {
+                            if (atoms.length < 2) {
+                                showMessage("Place at least 2 atoms to predict bonds.");
+                                btn.classList.remove('active'); // Don't keep action buttons active
+                                return;
+                            }
+                            callBackendToPredictBonds();
+                        } else if (btn.id === 'tool-clear') {
+                            atoms = [];
+                            bonds = [];
+                            nextAtomId = 0;
+                            scale = 1;
+                            panX = 0;
+                            panY = 0;
+                            drawCanvas();
+                        }
+                        // De-select action buttons after click
+                        setTimeout(() => btn.classList.remove('active'), 100);
+                    }
                 });
             });
 
-            document.getElementById('tool-clear').addEventListener('click', () => {
-                atoms = [];
-                bonds = [];
-                nextAtomId = 0;
-                drawCanvas();
-            });
-            
-            document.getElementById('tool-predict').addEventListener('click', () => {
-                if (atoms.length < 2) {
-                    showMessage("Place at least 2 atoms to predict bonds.");
+            // --- Search Logic (NEW) ---
+            function performSearch(query) {
+                if (!query) {
+                    searchResults.innerHTML = '';
+                    searchResults.classList.add('hidden');
                     return;
                 }
-                callBackendToPredictBonds();
+                const lowerQuery = query.toLowerCase();
+                const results = PERIODIC_TABLE.filter(el => 
+                    el.name.toLowerCase().includes(lowerQuery) ||
+                    el.s.toLowerCase() === lowerQuery ||
+                    el.n.toString() === query
+                ).slice(0, 10); // Limit to 10 results
+
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<div class="p-3 text-gray-500">No results found</div>';
+                } else {
+                    searchResults.innerHTML = results.map(el => `
+                        <div class="p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center" data-symbol="${el.s}">
+                            <div>
+                                <span class="font-bold">${el.s}</span>
+                                <span class="text-gray-600 ml-2">${el.name}</span>
+                            </div>
+                            <span class="text-sm text-gray-400">#${el.n}</span>
+                        </div>
+                    `).join('');
+                }
+                searchResults.classList.remove('hidden');
+            }
+
+            searchInput.addEventListener('input', (e) => performSearch(e.target.value));
+            searchInput.addEventListener('focus', (e) => performSearch(e.target.value));
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.classList.add('hidden');
+                }
             });
-            
+
+            searchResults.addEventListener('click', (e) => {
+                const resultItem = e.target.closest('[data-symbol]');
+                if (resultItem) {
+                    const symbol = resultItem.dataset.symbol;
+                    activeTool = symbol;
+                    
+                    // Add new button if it doesn't exist
+                    if (!document.getElementById(`tool-${symbol}`)) {
+                        const newBtn = document.createElement('button');
+                        newBtn.id = `tool-${symbol}`;
+                        newBtn.className = 'tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md';
+                        newBtn.dataset.atom = symbol;
+                        newBtn.innerText = symbol;
+                        newBtn.addEventListener('click', () => {
+                            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                            newBtn.classList.add('active');
+                            activeTool = symbol;
+                        });
+                        // Add to toolbar
+                        const actionsHeader = document.querySelector('h2.text-sm.font-semibold.text-center.text-gray-600:nth-of-type(1)');
+                        // This line was failing because actionsHeader was null due to the typo
+                        actionsHeader.parentElement.insertBefore(newBtn, actionsHeader.nextElementSibling.nextElementSibling.nextElementSibling.nextElementSibling);
+                    }
+                    
+                    // Activate the button
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    document.getElementById(`tool-${symbol}`).classList.add('active');
+
+                    searchInput.value = '';
+                    searchResults.classList.add('hidden');
+                }
+            });
+
+            // --- Atom Info Modal Logic (NEW) ---
+            function openAtomInfoModal(atom) {
+                document.getElementById('modal-atom-name').innerText = PERIODIC_TABLE.find(el => el.s === atom.element)?.name || atom.element;
+                document.getElementById('modal-atom-id').innerText = atom.id;
+                document.getElementById('modal-atom-element').innerText = atom.element;
+                
+                const bondCount = bonds.filter(b => b.atom1_id === atom.id || b.atom2_id === atom.id).length;
+                document.getElementById('modal-atom-bonds').innerText = bondCount;
+
+                modalFunFactText.innerText = 'Click the button to get a fun fact!';
+                modalFunFactBtn.disabled = false;
+                modalFunFactBtn.innerText = "Get Fun Fact";
+                
+                // Store element for the fun fact button
+                modalFunFactBtn.dataset.element = atom.element;
+
+                atomInfoModal.classList.remove('hidden');
+            }
+
+            modalCloseBtn.addEventListener('click', () => atomInfoModal.classList.add('hidden'));
+
+            modalFunFactBtn.addEventListener('click', async (e) => {
+                const element = e.target.dataset.element;
+                e.target.disabled = true;
+                e.target.innerText = "Loading...";
+                
+                try {
+                    // === FIX: Changed to relative path for better blob: compatibility ===
+                    const response = await fetch('./api/get_fun_fact', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ element })
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Failed to fetch fact');
+                    }
+                    const data = await response.json();
+                    modalFunFactText.innerText = data.fact;
+
+                } catch (error) {
+                    console.error("Fun fact error:", error);
+                    modalFunFactText.innerText = "Sorry, I couldn't get a fact right now.";
+                    e.target.disabled = false; // Re-enable button on error
+                    e.target.innerText = "Get Fun Fact";
+                }
+            });
+
             // --- Backend Prediction Logic ---
-            
-            // *** THIS IS THE IMPORTANT CHANGE ***
-            // We now use a relative path, which will point to our own server.
-            const BACKEND_URL = "/api/predict_bonds";
+            // === FIX: Changed to relative path for better blob: compatibility ===
+            const BACKEND_URL = "./api/predict_bonds";
 
             async function callBackendToPredictBonds() {
                 setLoading(true);
-                
                 const atomList = atoms.map(atom => atom.element);
                 const payload = { atoms: atomList };
 
@@ -286,16 +560,13 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    
                     if (!response.ok) {
                         const err = await response.json();
                         throw new Error(err.error || `HTTP error! status: ${response.status}`);
                     }
-
                     const prediction = await response.json();
                     applyPredictions(prediction);
                     showMessage("Bonds predicted!", false);
-
                 } catch (error) {
                     console.error("Backend Prediction Error:", error);
                     showMessage("Prediction failed: " + error.message);
@@ -306,19 +577,15 @@
 
             function applyPredictions(prediction) {
                 if (!prediction.bonds) return;
-
                 bonds = []; // Clear existing bonds
-
                 prediction.bonds.forEach(bond => {
                     const atom1_idx = bond.from;
                     const atom2_idx = bond.to;
-
                     if (atom1_idx < atoms.length && atom2_idx < atoms.length) {
                         const id1 = atoms[atom1_idx].id;
                         const id2 = atoms[atom2_idx].id;
-                        const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
-                        if (!bondExists) {
-                            bonds.push({ atom1_id: id1, atom2_id: id2 });
+                        if (!bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1))) {
+                            bonds.push({ atom1_id: id1, atom2_id: id2, type: bond.type || "SINGLE" });
                         }
                     }
                 });
@@ -334,6 +601,8 @@
             canvas.addEventListener('touchmove', handleMove);
             canvas.addEventListener('touchend', handleEnd);
             canvas.addEventListener('touchcancel', handleEnd);
+            canvas.addEventListener('wheel', handleWheel); // New
+            canvas.addEventListener('contextmenu', e => e.preventDefault()); // Disable right-click menu
 
             // --- Initial Load ---
             window.addEventListener('resize', resizeCanvas);
