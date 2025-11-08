@@ -34,7 +34,7 @@ corresponding to the user's input atom list.
 
 # === FIX 1: Pass the system prompt string directly to the model constructor ===
 model = genai.GenerativeModel(
-    'gemini-2.5-flash-preview-09-2025',
+    'gemini-1.5-flash',
     system_instruction=SYSTEM_PROMPT
 )
 
