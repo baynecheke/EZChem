@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molecule Sketchpad V3</title>
+    <title>Molecule Sketchpad V5 (Group Info)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
             font-family: 'Inter', sans-serif;
             overscroll-behavior: none;
-            background-color: #f3f4f6; /* bg-gray-100 */
+            background-color: #f3f4f6;
         }
         canvas {
             touch-action: none;
@@ -22,17 +22,14 @@
         .tool-btn:not(.active) {
             @apply hover:bg-gray-200;
         }
-        /* Hide scrollbars for search results */
         #search-results::-webkit-scrollbar { display: none; }
         #search-results { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="h-full flex flex-col antialiased">
 
-    <!-- Top Bar with Search -->
     <div class="bg-gray-800 text-white p-2 shadow-md flex items-center gap-4">
         <h1 class="text-xl font-bold text-center">EZChem</h1>
-        <!-- Search Wrapper -->
         <div class="relative flex-1 max-w-md mx-auto">
             <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -40,22 +37,16 @@
                 </svg>
                 <input type="search" id="search-input" placeholder="Search atoms (e.g., 'Iron', 'Fe', '26')" class="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
-            <!-- Search Results Dropdown -->
             <div id="search-results" class="absolute z-50 w-full bg-white text-black rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
-                <!-- Results will be injected by JS -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- Main Content Area -->
     <div class="flex-1 flex flex-row p-4 gap-4 h-full min-h-0">
 
-        <!-- Toolbar (New Compact Version) -->
         <div class="flex flex-col items-center bg-white p-2 rounded-lg shadow-lg gap-2 w-20">
-            <!-- === FIX: Corrected 'font.semibold' to 'font-semibold' === -->
             <h2 class="text-sm font-semibold text-center text-gray-600">Atoms</h2>
             
-            <!-- Atom Tools -->
             <button id="tool-C" class="tool-btn active w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="C">C</button>
             <button id="tool-H" class="tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="H">H</button>
             <button id="tool-O" class="tool-btn w-full h-16 rounded-lg font-bold text-2xl bg-gray-100 text-gray-800 shadow-md" data-atom="O">O</button>
@@ -64,15 +55,19 @@
             <div class="w-full border-t border-gray-200 my-2"></div>
             <h2 class="text-sm font-semibold text-center text-gray-600">Actions</h2>
 
-            <!-- Info Tool (NEW) -->
-            <button id="tool-info" class="tool-btn w-full h-16 rounded-lg bg-blue-500 text-white p-2 shadow-md flex items-center justify-center" title="Info Tool">
+            <button id="tool-group" class="tool-btn w-full h-16 rounded-lg bg-purple-500 text-white p-2 shadow-md flex items-center justify-center" title="Group Tool">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                </svg>
+            </button>
+
+            <button id="tool-info" class="tool-btn w-full h-16 rounded-lg bg-blue-500 text-white p-2 shadow-md flex items-center justify-center" title="Info Tool (Click Atoms or Groups)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </button>
 
-            <!-- AI Predict Button -->
-            <button id="tool-predict" class="tool-btn relative w-full h-16 rounded-lg bg-green-500 text-white p-2 shadow-md flex items-center justify-center" title="Predict Bonds">
+            <button id="tool-predict" class="tool-btn relative w-full h-16 rounded-lg bg-green-500 text-white p-2 shadow-md flex items-center justify-center" title="Predict Bonds (within groups)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M12 21v-1m0-10c-1.657 0-3 2.239-3 5s1.343 5 3 5 3-2.239 3-5-1.343-5-3-5z" />
                 </svg>
@@ -84,7 +79,6 @@
                 </div>
             </button>
             
-            <!-- Clear Button -->
             <button id="tool-clear" class="tool-btn w-full h-16 rounded-lg bg-red-500 text-white p-2 shadow-md flex items-center justify-center" title="Clear Canvas">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -92,19 +86,16 @@
             </button>
         </div>
 
-        <!-- Drawing Canvas -->
         <div class="flex-1 bg-white rounded-lg shadow-lg h-full overflow-hidden">
             <canvas id="sketchpad"></canvas>
         </div>
 
     </div>
 
-    <!-- Info Message Box -->
     <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden z-50">
         <span id="message-text"></span>
     </div>
 
-    <!-- Atom Info Modal (NEW) -->
     <div id="atom-info-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40 hidden">
         <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
             <div class="flex justify-between items-center mb-4">
@@ -127,6 +118,32 @@
                 </div>
                 <button id="modal-fun-fact-btn" class="w-full bg-indigo-600 text-white p-2 rounded-lg mt-3 hover:bg-indigo-700">
                     Get Fun Fact
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="group-info-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Molecule Info</h2>
+                <button id="group-modal-close-btn" class="text-gray-500 hover:text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-2">
+                <p><strong>Formula:</strong> <span id="modal-group-formula"></span></p>
+                <p><strong>Common Name:</strong> <span id="modal-group-name">N/A</span></p>
+                <p><strong>Molar Mass:</strong> <span id="modal-group-mass">N/A</span></g/mol></span></p>
+            </div>
+            <div class="mt-4 pt-4 border-t">
+                <div id="modal-group-info-box" class="bg-gray-100 p-3 rounded-lg min-h-[4rem] text-gray-700 italic">
+                    <span id="modal-group-info-text">Click the button to get AI-powered info.</span>
+                </div>
+                <button id="modal-group-info-btn" class="w-full bg-indigo-600 text-white p-2 rounded-lg mt-3 hover:bg-indigo-700">
+                    Get AI Info (Name, Mass)
                 </button>
             </div>
         </div>
@@ -169,23 +186,27 @@
             // --- App State ---
             let atoms = []; // { id, x, y, element, radius }
             let bonds = []; // { atom1_id, atom2_id }
-            let activeTool = 'C'; // Default tool, can be 'C', 'H', 'info'
+            let groups = []; // V4: { x, y, w, h }
+            let activeTool = 'C'; 
             let nextAtomId = 0;
             const ATOM_RADIUS = 20;
 
-            // --- Canvas Transform State (NEW) ---
+            // --- Canvas Transform State ---
             let scale = 1;
             let panX = 0;
             let panY = 0;
             let isPanning = false;
-            let lastPanPos = { x: 0, y: 0 }; // === FIX: Added for touch panning ===
+            let lastPanPos = { x: 0, y: 0 };
 
             // --- Dragging State ---
             let isDraggingAtom = false;
             let draggedAtomIndex = -1;
-            
+            let isGrouping = false; // V4: Are we drawing a group box?
+            let groupStartPos = { x: 0, y: 0 };
+            let currentGroupRect = null; // V4: { x, y, w, h }
+
             // --- Atom colors (CPK) ---
-            const ATOM_COLORS = { 'C': '#333333', 'H': '#CCCCCC', 'O': '#FF0D0D', 'N': '#3050F8', /* ... add more colors ... */ 'DEFAULT': '#888888' };
+            const ATOM_COLORS = { 'C': '#333333', 'H': '#CCCCCC', 'O': '#FF0D0D', 'N': '#3050F8', 'DEFAULT': '#888888' };
             
             // --- UI Elements ---
             const loadingSpinner = document.getElementById('loading-spinner');
@@ -197,6 +218,14 @@
             const modalCloseBtn = document.getElementById('modal-close-btn');
             const modalFunFactBtn = document.getElementById('modal-fun-fact-btn');
             const modalFunFactText = document.getElementById('modal-fun-fact-text');
+            // V5 Elements
+            const groupInfoModal = document.getElementById('group-info-modal');
+            const groupModalCloseBtn = document.getElementById('group-modal-close-btn');
+            const modalGroupFormula = document.getElementById('modal-group-formula');
+            const modalGroupName = document.getElementById('modal-group-name');
+            const modalGroupMass = document.getElementById('modal-group-mass');
+            const modalGroupInfoText = document.getElementById('modal-group-info-text');
+            const modalGroupInfoBtn = document.getElementById('modal-group-info-btn');
 
             // --- Canvas Setup ---
             function resizeCanvas() {
@@ -215,9 +244,18 @@
                 ctx.translate(panX, panY);
                 ctx.scale(scale, scale);
 
-                // 1. Draw Bonds
+                // 1. Draw Groups (V4)
+                ctx.fillStyle = 'rgba(139, 92, 246, 0.1)'; // purple-500 with 10% opacity
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // purple-500 with 50% opacity
+                ctx.lineWidth = 2 / scale; // Scale line width
+                groups.forEach(group => {
+                    ctx.fillRect(group.x, group.y, group.w, group.h);
+                    ctx.strokeRect(group.x, group.y, group.w, group.h);
+                });
+
+                // 2. Draw Bonds
                 ctx.strokeStyle = '#666666';
-                ctx.lineWidth = 4;
+                ctx.lineWidth = 4 / scale; // Scale line width
                 bonds.forEach(bond => {
                     const atom1 = atoms.find(a => a.id === bond.atom1_id);
                     const atom2 = atoms.find(a => a.id === bond.atom2_id);
@@ -229,31 +267,43 @@
                     }
                 });
 
-                // 2. Draw Atoms
+                // 3. Draw Atoms
                 atoms.forEach(atom => {
                     ctx.beginPath();
-                    ctx.arc(atom.x, atom.y, atom.radius, 0, 2 * Math.PI);
+                    // Scale atom radius, but make it less sensitive
+                    const displayRadius = ATOM_RADIUS / Math.max(1, Math.min(scale, 1.5));
+                    ctx.arc(atom.x, atom.y, displayRadius, 0, 2 * Math.PI);
                     const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
                     ctx.fillStyle = color;
                     ctx.fill();
                     
                     ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
-                    ctx.font = `bold ${18 / scale}px Inter`; // Scale font size
+                    // Scale font size, but keep it readable
+                    const fontSize = Math.max(12, 18 / scale);
+                    ctx.font = `bold ${fontSize}px Inter`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(atom.element, atom.x, atom.y);
                 });
+
+                // 4. Draw temporary grouping box (V4)
+                if (isGrouping && currentGroupRect) {
+                    ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)';
+                    ctx.lineWidth = 2 / scale;
+                    ctx.setLineDash([5 / scale, 5 / scale]);
+                    ctx.strokeRect(currentGroupRect.x, currentGroupRect.y, currentGroupRect.w, currentGroupRect.h);
+                    ctx.setLineDash([]);
+                }
                 
                 ctx.restore();
             }
 
-            // --- Coordinate Helper (NEW) ---
+            // --- Coordinate Helper ---
             function getMousePos(evt) {
                 const rect = canvas.getBoundingClientRect();
                 const clientX = evt.clientX ?? evt.touches[0]?.clientX ?? evt.changedTouches?.[0]?.clientX;
                 const clientY = evt.clientY ?? evt.touches[0]?.clientY ?? evt.changedTouches?.[0]?.clientY;
                 
-                // Convert screen coords to canvas world coords
                 const worldX = (clientX - rect.left - panX) / scale;
                 const worldY = (clientY - rect.top - panY) / scale;
                 
@@ -263,22 +313,14 @@
             function getAtomAt(worldX, worldY) {
                 for (let i = atoms.length - 1; i >= 0; i--) {
                     const atom = atoms[i];
+                    // Use display radius for click detection
+                    const displayRadius = ATOM_RADIUS / Math.max(1, Math.min(scale, 1.5));
                     const dist = Math.sqrt((worldX - atom.x) ** 2 + (worldY - atom.y) ** 2);
-                    if (dist < atom.radius) {
+                    if (dist < displayRadius) {
                         return i;
                     }
                 }
                 return -1;
-            }
-            
-            function createBond(atom1_idx, atom2_idx) {
-                if (atom1_idx === atom2_idx) return;
-                const id1 = atoms[atom1_idx].id;
-                const id2 = atoms[atom2_idx].id;
-                const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
-                if (!bondExists) {
-                    bonds.push({ atom1_id: id1, atom2_id: id2, type: "SINGLE" });
-                }
             }
             
             // --- UI Helpers ---
@@ -291,14 +333,13 @@
                 setTimeout(() => { messageBox.classList.add('hidden'); }, 3000);
             }
 
-            // --- Event Handlers (Updated for Pan/Zoom) ---
+            // --- Event Handlers (V5) ---
             function handleStart(evt) {
                 evt.preventDefault();
                 const pos = getMousePos(evt);
                 
-                if (evt.button === 2 || (evt.touches && evt.touches.length === 2)) { // Right-click or 2-finger touch for pan
+                if (evt.button === 2 || (evt.touches && evt.touches.length === 2)) { 
                     isPanning = true;
-                    // === FIX: Store initial pan position for touch ===
                     lastPanPos = { x: pos.clientX, y: pos.clientY };
                     return;
                 }
@@ -307,8 +348,22 @@
                 
                 if (activeTool === 'info') {
                     if (clickedAtomIndex !== -1) {
+                        // Priority 1: Clicked an atom
                         openAtomInfoModal(atoms[clickedAtomIndex]);
+                    } else {
+                        // Priority 2: Clicked a group (V5)
+                        const clickedGroupIndex = getGroupAt(pos.x, pos.y);
+                        if (clickedGroupIndex !== -1) {
+                            openGroupInfoModal(groups[clickedGroupIndex]);
+                        }
                     }
+                    return;
+                }
+                
+                if (activeTool === 'group') { // V4
+                    isGrouping = true;
+                    groupStartPos = { x: pos.x, y: pos.y };
+                    currentGroupRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
                     return;
                 }
                 
@@ -333,12 +388,18 @@
                 const pos = getMousePos(evt);
 
                 if (isPanning) {
-                    // === FIX: Universal pan logic for mouse/touch ===
                     const deltaX = pos.clientX - lastPanPos.x;
                     const deltaY = pos.clientY - lastPanPos.y;
                     panX += deltaX;
                     panY += deltaY;
-                    lastPanPos = { x: pos.clientX, y: pos.clientY }; // Update last pos
+                    lastPanPos = { x: pos.clientX, y: pos.clientY };
+                    drawCanvas();
+                    return;
+                }
+                
+                if (isGrouping) { // V4
+                    currentGroupRect.w = pos.x - groupStartPos.x;
+                    currentGroupRect.h = pos.y - groupStartPos.y;
                     drawCanvas();
                     return;
                 }
@@ -357,13 +418,34 @@
                     return;
                 }
                 
+                if (isGrouping) { // V4
+                    isGrouping = false;
+                    // Normalize the rect (width/height can be negative)
+                    const x = Math.min(groupStartPos.x, groupStartPos.x + currentGroupRect.w);
+                    const y = Math.min(groupStartPos.y, groupStartPos.y + currentGroupRect.h);
+                    const w = Math.abs(currentGroupRect.w);
+                    const h = Math.abs(currentGroupRect.h);
+                    
+                    if (w > 10 && h > 10) { // Only add if it's a decent size
+                        groups.push({ x, y, w, h });
+                    }
+                    currentGroupRect = null;
+                    drawCanvas();
+                    return;
+                }
+                
                 if (!isDraggingAtom) return;
                 
-                const pos = getMousePos(evt); // Use getMousePos on 'evt' (which handles changedTouches)
+                const pos = getMousePos(evt);
                 const releasedOnAtomIndex = getAtomAt(pos.x, pos.y);
                 
                 if (releasedOnAtomIndex !== -1 && releasedOnAtomIndex !== draggedAtomIndex) {
-                    createBond(draggedAtomIndex, releasedOnAtomIndex);
+                    // Manually create bond
+                    const id1 = atoms[draggedAtomIndex].id;
+                    const id2 = atoms[releasedOnAtomIndex].id;
+                    if (!bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1))) {
+                        bonds.push({ atom1_id: id1, atom2_id: id2, type: "SINGLE" });
+                    }
                 } else {
                     atoms[draggedAtomIndex].x = pos.x;
                     atoms[draggedAtomIndex].y = pos.y;
@@ -377,14 +459,12 @@
             function handleWheel(evt) {
                 evt.preventDefault();
                 const pos = getMousePos(evt);
-                // === FIX: Get rect inside the handler ===
                 const rect = canvas.getBoundingClientRect(); 
                 
                 const zoomFactor = 0.1;
                 const wheel = evt.deltaY < 0 ? 1 : -1;
                 const newScale = Math.max(0.2, Math.min(scale + wheel * zoomFactor * scale, 5));
                 
-                // Pan so that the mouse point stays in the same world location
                 panX = panX - (pos.clientX - rect.left - panX) * (newScale / scale - 1);
                 panY = panY - (pos.clientY - rect.top - panY) * (newScale / scale - 1);
                 
@@ -392,7 +472,7 @@
                 drawCanvas();
             }
             
-            // --- Toolbar Listeners ---
+            // --- Toolbar Listeners (V4) ---
             document.querySelectorAll('.tool-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -402,18 +482,16 @@
                         activeTool = btn.dataset.atom;
                     } else if (btn.id === 'tool-info') {
                         activeTool = 'info';
+                    } else if (btn.id === 'tool-group') { // V4
+                        activeTool = 'group';
                     } else {
                         // Handle predict/clear
                         if (btn.id === 'tool-predict') {
-                            if (atoms.length < 2) {
-                                showMessage("Place at least 2 atoms to predict bonds.");
-                                btn.classList.remove('active'); // Don't keep action buttons active
-                                return;
-                            }
-                            callBackendToPredictBonds();
+                            callBackendToPredictBonds(); // V4 logic is inside this func
                         } else if (btn.id === 'tool-clear') {
                             atoms = [];
                             bonds = [];
+                            groups = []; // V4
                             nextAtomId = 0;
                             scale = 1;
                             panX = 0;
@@ -426,7 +504,7 @@
                 });
             });
 
-            // --- Search Logic (NEW) ---
+            // --- Search Logic ---
             function performSearch(query) {
                 if (!query) {
                     searchResults.innerHTML = '';
@@ -438,7 +516,7 @@
                     el.name.toLowerCase().includes(lowerQuery) ||
                     el.s.toLowerCase() === lowerQuery ||
                     el.n.toString() === query
-                ).slice(0, 10); // Limit to 10 results
+                ).slice(0, 10); 
 
                 if (results.length === 0) {
                     searchResults.innerHTML = '<div class="p-3 text-gray-500">No results found</div>';
@@ -455,22 +533,18 @@
                 }
                 searchResults.classList.remove('hidden');
             }
-
             searchInput.addEventListener('input', (e) => performSearch(e.target.value));
-            searchInput.addEventListener('focus', (e) => performSearch(e.target.value));
+            searchInput.addEventListener('focus', (e) => performSearch(e.targe.value));
             document.addEventListener('click', (e) => {
                 if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                     searchResults.classList.add('hidden');
                 }
             });
-
             searchResults.addEventListener('click', (e) => {
                 const resultItem = e.target.closest('[data-symbol]');
                 if (resultItem) {
                     const symbol = resultItem.dataset.symbol;
                     activeTool = symbol;
-                    
-                    // Add new button if it doesn't exist
                     if (!document.getElementById(`tool-${symbol}`)) {
                         const newBtn = document.createElement('button');
                         newBtn.id = `tool-${symbol}`;
@@ -482,22 +556,17 @@
                             newBtn.classList.add('active');
                             activeTool = symbol;
                         });
-                        // Add to toolbar
                         const actionsHeader = document.querySelector('h2.text-sm.font-semibold.text-center.text-gray-600:nth-of-type(1)');
-                        // This line was failing because actionsHeader was null due to the typo
                         actionsHeader.parentElement.insertBefore(newBtn, actionsHeader.nextElementSibling.nextElementSibling.nextElementSibling.nextElementSibling);
                     }
-                    
-                    // Activate the button
                     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
                     document.getElementById(`tool-${symbol}`).classList.add('active');
-
                     searchInput.value = '';
                     searchResults.classList.add('hidden');
                 }
             });
 
-            // --- Atom Info Modal Logic (NEW) ---
+            // --- Atom Info Modal Logic (V3) ---
             function openAtomInfoModal(atom) {
                 document.getElementById('modal-atom-name').innerText = PERIODIC_TABLE.find(el => el.s === atom.element)?.name || atom.element;
                 document.getElementById('modal-atom-id').innerText = atom.id;
@@ -510,21 +579,18 @@
                 modalFunFactBtn.disabled = false;
                 modalFunFactBtn.innerText = "Get Fun Fact";
                 
-                // Store element for the fun fact button
                 modalFunFactBtn.dataset.element = atom.element;
-
                 atomInfoModal.classList.remove('hidden');
             }
-
             modalCloseBtn.addEventListener('click', () => atomInfoModal.classList.add('hidden'));
-
             modalFunFactBtn.addEventListener('click', async (e) => {
-                const element = e.target.dataset.element;
-                e.target.disabled = true;
-                e.target.innerText = "Loading...";
+                const button = e.target;
+                const element = button.dataset.element;
+                
+                button.disabled = true;
+                button.innerText = "Loading...";
                 
                 try {
-                    // === FIX: Changed to relative path for better blob: compatibility ===
                     const response = await fetch('./api/get_fun_fact', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -536,60 +602,222 @@
                     }
                     const data = await response.json();
                     modalFunFactText.innerText = data.fact;
-
+                    button.innerText = "Fact Loaded!";
                 } catch (error) {
                     console.error("Fun fact error:", error);
                     modalFunFactText.innerText = "Sorry, I couldn't get a fact right now.";
-                    e.target.disabled = false; // Re-enable button on error
-                    e.target.innerText = "Get Fun Fact";
+                    button.disabled = false; 
+                    button.innerText = "Try Again";
                 }
             });
 
-            // --- Backend Prediction Logic ---
-            // === FIX: Changed to relative path for better blob: compatibility ===
+            // --- Group Info Modal Logic (V5) ---
+            function getGroupAt(worldX, worldY) {
+                // Find in reverse so we get the top-most group
+                for (let i = groups.length - 1; i >= 0; i--) {
+                    const group = groups[i];
+                    // Check if click is inside the group box
+                    if (worldX >= group.x && worldX <= group.x + group.w &&
+                        worldY >= group.y && worldY <= group.y + group.h) {
+                        return i; // Return the index
+                    }
+                }
+                return -1; // No group found
+            }
+
+            function calculateFormula(atomList) {
+                if (atomList.length === 0) return "N/A";
+                
+                const counts = atomList.reduce((acc, element) => {
+                    acc[element] = (acc[element] || 0) + 1;
+                    return acc;
+                }, {});
+
+                // Format: C, then H, then alphabetical
+                let formula = "";
+                if (counts.C) {
+                    formula += `C${counts.C > 1 ? counts.C : ''}`;
+                    delete counts.C;
+                }
+                if (counts.H) {
+                    formula += `H${counts.H > 1 ? counts.H : ''}`;
+                    delete counts.H;
+                }
+                
+                Object.keys(counts).sort().forEach(element => {
+                    formula += `${element}${counts[element] > 1 ? counts[element] : ''}`;
+                });
+                
+                return formula;
+            }
+
+            function openGroupInfoModal(group) {
+                // 1. Find all atoms in this group
+                const atomsInGroup = atoms.filter(atom => 
+                    atom.x >= group.x && atom.x <= group.x + group.w &&
+                    atom.y >= group.y && atom.y <= group.h
+                );
+                
+                const atomList = atomsInGroup.map(atom => atom.element);
+                
+                // 2. Calculate and set formula locally
+                modalGroupFormula.innerText = calculateFormula(atomList);
+
+                // 3. Reset AI fields
+                modalGroupName.innerText = "N/A";
+                modalGroupMass.innerText = "N/A";
+                modalGroupInfoText.innerText = "Click the button to get AI-powered info.";
+                
+                // 4. Set up button for API call
+                modalGroupInfoBtn.disabled = false;
+                modalGroupInfoBtn.innerText = "Get AI Info (Name, Mass)";
+                modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomList); // Store atoms for the call
+                
+                groupInfoModal.classList.remove('hidden');
+            }
+
+            groupModalCloseBtn.addEventListener('click', () => groupInfoModal.classList.add('hidden'));
+
+            modalGroupInfoBtn.addEventListener('click', async (e) => {
+                const button = e.target;
+                const atomList = JSON.parse(button.dataset.atoms);
+
+                if (atomList.length === 0) {
+                    modalGroupInfoText.innerText = "No atoms in this group to analyze.";
+                    return;
+                }
+                
+                button.disabled = true;
+                button.innerText = "Loading AI Info...";
+                modalGroupInfoText.innerText = "Contacting AI chemist...";
+
+                try {
+                    const response = await fetch('./api/get_molecule_info', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ atoms: atomList })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Failed to fetch info');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    modalGroupName.innerText = data.common_name;
+                    modalGroupMass.innerText = `${data.molar_mass_g_mol} g/mol`;
+                    modalGroupInfoText.innerText = "AI analysis complete!";
+                    button.innerText = "Info Loaded!";
+
+                } catch (error) {
+                    console.error("Molecule info error:", error);
+                    modalGroupInfoText.innerText = `Error: ${error.message}`;
+                    button.disabled = false;
+                    button.innerText = "Try Again";
+                }
+            });
+
+            // --- Backend Prediction Logic (V4) ---
             const BACKEND_URL = "./api/predict_bonds";
 
             async function callBackendToPredictBonds() {
+                // 1. Clear all existing bonds
+                bonds = [];
                 setLoading(true);
-                const atomList = atoms.map(atom => atom.element);
-                const payload = { atoms: atomList };
+
+                let predictionRequests = [];
+
+                if (groups.length === 0) {
+                    // --- Fallback: No groups, predict all atoms ---
+                    if (atoms.length < 2) {
+                        showMessage("Place at least 2 atoms or group them to predict bonds.");
+                        setLoading(false);
+                        return;
+                    }
+                    const atomList = atoms.map(atom => atom.element);
+                    const atomIdMap = atoms.map(atom => atom.id); // Map local index -> global ID
+                    predictionRequests.push(runPrediction(atomList, atomIdMap));
+
+                } else {
+                    // --- New Logic: Run prediction for each group ---
+                    groups.forEach(group => {
+                        // Find atoms within this group
+                        const atomsInGroup = atoms.filter(atom => 
+                            atom.x >= group.x && atom.x <= group.x + group.w &&
+                            atom.y >= group.y && atom.y <= group.h
+                        );
+                        
+                        if (atomsInGroup.length >= 2) {
+                            const atomList = atomsInGroup.map(atom => atom.element);
+                            const atomIdMap = atomsInGroup.map(atom => atom.id); // Map local index -> global ID
+                            predictionRequests.push(runPrediction(atomList, atomIdMap));
+                        }
+                    });
+
+                    if (predictionRequests.length === 0) {
+                        showMessage("No groups found containing 2 or more atoms.");
+                        setLoading(false);
+                        return;
+                    }
+                }
 
                 try {
-                    const response = await fetch(BACKEND_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || `HTTP error! status: ${response.status}`);
-                    }
-                    const prediction = await response.json();
-                    applyPredictions(prediction);
+                    // Wait for all group predictions to finish
+                    await Promise.all(predictionRequests);
                     showMessage("Bonds predicted!", false);
                 } catch (error) {
                     console.error("Backend Prediction Error:", error);
-                    showMessage("Prediction failed: " + error.message);
+                    showMessage("One or more predictions failed: " + error.message);
                 } finally {
                     setLoading(false);
+                    drawCanvas(); // Draw all new bonds at the end
                 }
             }
+            
+            async function runPrediction(atomList, atomIdMap) {
+                // This helper function calls the API for a single group
+                const payload = { atoms: atomList };
+                
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const prediction = await response.json();
+                // Pass the prediction AND the translator map to applyPredictions
+                applyPredictions(prediction, atomIdMap);
+            }
 
-            function applyPredictions(prediction) {
+            function applyPredictions(prediction, atomIdMap) {
+                // This function is now just a translator.
+                // It NO LONGER clears the bonds.
                 if (!prediction.bonds) return;
-                bonds = []; // Clear existing bonds
+
                 prediction.bonds.forEach(bond => {
-                    const atom1_idx = bond.from;
-                    const atom2_idx = bond.to;
-                    if (atom1_idx < atoms.length && atom2_idx < atoms.length) {
-                        const id1 = atoms[atom1_idx].id;
-                        const id2 = atoms[atom2_idx].id;
-                        if (!bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1))) {
+                    // 1. Get local indices from AI (e.g., 0, 1)
+                    const local_idx_1 = bond.from;
+                    const local_idx_2 = bond.to;
+
+                    // 2. Translate to global atom IDs using the map (e.g., 14, 15)
+                    const id1 = atomIdMap[local_idx_1];
+                    const id2 = atomIdMap[local_idx_2];
+                    
+                    // 3. Add the bond to the global list
+                    if (id1 !== undefined && id2 !== undefined) {
+                        const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
+                        if (!bondExists) {
                             bonds.push({ atom1_id: id1, atom2_id: id2, type: bond.type || "SINGLE" });
                         }
                     }
                 });
-                drawCanvas();
+                // We don't draw here; callBackendToPredictBonds will draw once all are done.
             }
 
             // --- Canvas Event Listeners ---
@@ -601,8 +829,8 @@
             canvas.addEventListener('touchmove', handleMove);
             canvas.addEventListener('touchend', handleEnd);
             canvas.addEventListener('touchcancel', handleEnd);
-            canvas.addEventListener('wheel', handleWheel); // New
-            canvas.addEventListener('contextmenu', e => e.preventDefault()); // Disable right-click menu
+            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
 
             // --- Initial Load ---
             window.addEventListener('resize', resizeCanvas);
