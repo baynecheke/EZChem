@@ -2,6 +2,7 @@ import os
 import google.generativeai as genai
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from collections import Counter
 
 # --- Configuration ---
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -22,12 +23,24 @@ CORS(app)
 
 # Model 1: JSON/Chemistry Predictions
 CHEMISTRY_PROMPT = """
-You are a chemistry expert. A user will provide a list of atoms. 
-Your task is to predict the most likely stable bonding structure for these atoms.
-Respond *only* with a JSON object that adheres to the provided schema. 
+You are a chemistry expert. A user will provide a list of atoms.
+Your task is to predict ALL chemical bonds for the most likely stable structure.
+You must account for every atom in the list.
+Respond *only* with a JSON object that adheres to the provided schema.
 Do not include any other text or markdown formatting.
-The 'from' and 'to' fields in the bonds should be 0-based indices 
+The 'from' and 'to' fields in the bonds should be 0-based indices
 corresponding to the user's input atom list.
+
+Example user query: "Predict all bonds for the molecule CH4, based on this 0-indexed atom list: ['C', 'H', 'H', 'H', 'H']"
+Example JSON response:
+{
+  "bonds": [
+    {"from": 0, "to": 1, "type": "SINGLE"},
+    {"from": 0, "to": 2, "type": "SINGLE"},
+    {"from": 0, "to": 3, "type": "SINGLE"},
+    {"from": 0, "to": 4, "type": "SINGLE"}
+  ]
+}
 """
 json_model = genai.GenerativeModel(
     'gemini-2.5-flash-preview-09-2025',
@@ -104,7 +117,23 @@ def handle_predict_bonds():
     atom_list = data['atoms']
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
-    user_query = f"Atoms: {str(atom_list)}"
+    atom_counts = Counter(atom_list)
+formula = ""
+
+# Follow C, then H, then alphabetical order (like in the frontend)
+if 'C' in atom_counts:
+    count = atom_counts.pop('C')
+    formula += f"C{count if count > 1 else ''}"
+if 'H' in atom_counts:
+    count = atom_counts.pop('H')
+    formula += f"H{count if count > 1 else ''}"
+
+# Add remaining elements alphabetically
+for element in sorted(atom_counts.keys()):
+    count = atom_counts[element]
+    formula += f"{element}{count if count > 1 else ''}"
+
+user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
     try:
         response = json_model.generate_content(
             user_query,
