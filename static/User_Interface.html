@@ -136,7 +136,7 @@
             <div class="space-y-2">
                 <p><strong>Formula:</strong> <span id="modal-group-formula"></span></p>
                 <p><strong>Common Name:</strong> <span id="modal-group-name">N/A</span></p>
-                <p><strong>Molar Mass:</strong> <span id="modal-group-mass">N/A</span></g/mol></span></p>
+                <p><strong>Molar Mass:</strong> <span id="modal-group-mass">N/A</span></p>
             </div>
             <div class="mt-4 pt-4 border-t">
                 <div id="modal-group-info-box" class="bg-gray-100 p-3 rounded-lg min-h-[4rem] text-gray-700 italic">
@@ -534,7 +534,7 @@
                 searchResults.classList.remove('hidden');
             }
             searchInput.addEventListener('input', (e) => performSearch(e.target.value));
-            searchInput.addEventListener('focus', (e) => performSearch(e.targe.value));
+            searchInput.addEventListener('focus', (e) => performSearch(e.target.value));
             document.addEventListener('click', (e) => {
                 if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                     searchResults.classList.add('hidden');
