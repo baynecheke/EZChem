@@ -72,6 +72,14 @@ def serve_frontend():
     """
     Serves the User_Interface.html file from the 'static' folder.
     """
+    # === FIX FOR PYLANCE ERROR ===
+    # Pylance correctly notes that app.static_folder *could* be None.
+    # We add a check to handle this, even though our app's setup
+    # ensures it will always be 'static'.
+    if app.static_folder is None:
+        # This should never be reached in our app
+        return "Server configuration error: Static folder not found.", 500
+        
     return send_from_directory(app.static_folder, 'User_Interface.html')
 
 
