@@ -189,13 +189,17 @@ def get_molecule_info():
 
     # --- This entire block is now indented ---
     try:
-        response = info_model.generate_content(user_query, generation_config=info_generation_config )
-        import json
-        info_json = json.loads(response.candidates[0].content.parts[0].text)
-        return jsonify(info_json)
+            response = info_model.generate_content(user_query, generation_config=info_generation_config )
+            
+            # Get the text part of the response
+            info_text = response.candidates[0].content.parts[0].text
+            
+            # Parse and return it in one step, just like the other endpoint
+            return jsonify(json.loads(info_text))
+            
     except Exception as e:
-        print(f"An error occurred calling the Gemini API for info: {e}")
-        return jsonify({"error": f"AI info generation failed: {e}"}), 500
+            print(f"An error occurred calling the Gemini API for info: {e}")
+            return jsonify({"error": f"AI info generation failed: {e}"}), 500
 
 
 # --- Run the Server ---
