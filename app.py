@@ -118,22 +118,22 @@ def handle_predict_bonds():
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
     atom_counts = Counter(atom_list)
-formula = ""
+    formula = ""
 
-# Follow C, then H, then alphabetical order (like in the frontend)
-if 'C' in atom_counts:
-    count = atom_counts.pop('C')
-    formula += f"C{count if count > 1 else ''}"
-if 'H' in atom_counts:
-    count = atom_counts.pop('H')
-    formula += f"H{count if count > 1 else ''}"
+    # Follow C, then H, then alphabetical order (like in the frontend)
+    if 'C' in atom_counts:
+        count = atom_counts.pop('C')
+        formula += f"C{count if count > 1 else ''}"
+    if 'H' in atom_counts:
+        count = atom_counts.pop('H')
+        formula += f"H{count if count > 1 else ''}"
 
-# Add remaining elements alphabetically
-for element in sorted(atom_counts.keys()):
-    count = atom_counts[element]
-    formula += f"{element}{count if count > 1 else ''}"
+    # Add remaining elements alphabetically
+    for element in sorted(atom_counts.keys()):
+        count = atom_counts[element]
+        formula += f"{element}{count if count > 1 else ''}"
 
-user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
+    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
     try:
         response = json_model.generate_content(
             user_query,
