@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecule Sketchpad V2 (Frontend)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        body, html {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+        }
+        canvas {
+            touch-action: none; /* Disables browser gestures like pan/zoom on the canvas */
+            cursor: crosshair;
+        }
+        .tool-btn.active {
+            @apply bg-indigo-600 text-white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-full flex flex-col antialiased">
+
+    <div class="bg-gray-800 text-white p-4 shadow-md">
+        <h1 class="text-xl font-bold text-center">Molecule Sketchpad V2 (Frontend)</h1>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col md:flex-row p-4 gap-4 h-full min-h-0">
+
+        <!-- Toolbar -->
+        <div class="flex flex-row md:flex-col justify-center items-center bg-white p-4 rounded-lg shadow-lg flex-wrap gap-3 md:gap-4">
+            <h2 class="text-lg font-semibold w-full text-center hidden md:block">Atoms</h2>
+            
+            <!-- Atom Tools -->
+            <button id="tool-C" class="tool-btn active size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="C">C</button>
+            <button id="tool-H" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="H">H</button>
+            <button id="tool-O" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="O">O</button>
+            <button id="tool-N" class="tool-btn size-12 md:size-14 rounded-full font-bold text-xl bg-gray-200 text-gray-800 shadow-md hover:ring-2 hover:ring-indigo-500" data-atom="N">N</button>
+            
+            <div class="w-full border-t border-gray-200 my-2"></div>
+            <h2 class="text-lg font-semibold w-full text-center hidden md:block">Actions</h2>
+
+            <!-- AI Predict Button -->
+            <button id="tool-predict" class="relative flex items-center justify-center h-14 w-full md:w-14 rounded-lg bg-green-500 text-white p-2 shadow-md hover:bg-green-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M12 21v-1m0-10c-1.657 0-3 2.239-3 5s1.343 5 3 5 3-2.239 3-5-1.343-5-3-5z" />
+                </svg>
+                <span class="md:hidden ml-2">Predict Bonds</span>
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="absolute inset-0 bg-green-500 bg-opacity-80 flex items-center justify-center rounded-lg hidden">
+                    <svg class="animate-spin size-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+            </button>
+            
+            <!-- Clear Button -->
+            <button id="tool-clear" class="flex items-center justify-center h-14 w-full md:w-14 rounded-lg bg-red-500 text-white p-2 shadow-md hover:bg-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span class="md:hidden ml-2">Clear Canvas</span>
+            </button>
+        </div>
+
+        <!-- Drawing Canvas -->
+        <div class="flex-1 bg-white rounded-lg shadow-lg h-[60vh] md:h-auto overflow-hidden">
+            <canvas id="sketchpad" class="w-full h-full"></canvas>
+        </div>
+
+    </div>
+
+    <!-- Info Message Box -->
+    <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden">
+        <span id="message-text"></span>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('sketchpad');
+            const ctx = canvas.getContext('2d');
+            
+            // App State
+            let atoms = []; // { id, x, y, element, radius }
+            let bonds = []; // { atom1_id, atom2_id }
+            let activeElement = 'C'; // Default tool
+            let nextAtomId = 0;
+            const ATOM_RADIUS = 20;
+
+            // Dragging State
+            let isDragging = false;
+            let draggedAtomIndex = -1;
+            
+            // Atom colors (CPK convention)
+            const ATOM_COLORS = {
+                'C': '#333333', // Dark Gray
+                'H': '#CCCCCC', // Light Gray
+                'O': '#FF0D0D', // Red
+                'N': '#3050F8', // Blue
+                'DEFAULT': '#888888'
+            };
+            
+            // UI Elements
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+
+            // --- Canvas Setup ---
+            function resizeCanvas() {
+                const parent = canvas.parentElement;
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+                drawCanvas(); // Redraw everything on resize
+            }
+
+            // --- Drawing Functions ---
+            function drawCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 1. Draw Bonds (so atoms are on top)
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 4;
+                bonds.forEach(bond => {
+                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
+                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
+                    if (atom1 && atom2) {
+                        ctx.beginPath();
+                        ctx.moveTo(atom1.x, atom1.y);
+                        ctx.lineTo(atom2.x, atom2.y);
+                        ctx.stroke();
+                    }
+                });
+
+                // 2. Draw Atoms
+                atoms.forEach(atom => {
+                    ctx.beginPath();
+                    ctx.arc(atom.x, atom.y, atom.radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
+                    ctx.fill();
+                    
+                    ctx.fillStyle = (atom.element === 'C' || atom.element === 'N') ? '#FFFFFF' : '#000000';
+                    ctx.font = 'bold 18px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(atom.element, atom.x, atom.y);
+                });
+            }
+
+            // --- Helper Functions ---
+            function getMousePos(evt) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = evt.clientX ?? evt.touches[0]?.clientX;
+                const clientY = evt.clientY ?? evt.touches[0]?.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+            
+            function getAtomAt(x, y) {
+                for (let i = atoms.length - 1; i >= 0; i--) {
+                    const atom = atoms[i];
+                    const dist = Math.sqrt((x - atom.x) ** 2 + (y - atom.y) ** 2);
+                    if (dist < atom.radius) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+            
+            function createBond(atom1_idx, atom2_idx) {
+                if (atom1_idx === atom2_idx) return;
+                const id1 = atoms[atom1_idx].id;
+                const id2 = atoms[atom2_idx].id;
+                const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
+                if (!bondExists) {
+                    bonds.push({ atom1_id: id1, atom2_id: id2 });
+                }
+            }
+            
+            function setLoading(isLoading) {
+                loadingSpinner.classList.toggle('hidden', !isLoading);
+            }
+            
+            function showMessage(text, isError = true) {
+                messageText.innerText = text;
+                messageBox.classList.toggle('bg-red-500', isError);
+                messageBox.classList.toggle('bg-green-500', !isError);
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 3000);
+            }
+
+            // --- Event Handlers ---
+            function handleStart(evt) {
+                evt.preventDefault();
+                const pos = getMousePos(evt);
+                const clickedAtomIndex = getAtomAt(pos.x, pos.y);
+                
+                if (clickedAtomIndex !== -1) {
+                    isDragging = true;
+                    draggedAtomIndex = clickedAtomIndex;
+                } else {
+                    const newAtom = {
+                        id: nextAtomId++,
+                        x: pos.x,
+                        y: pos.y,
+                        element: activeElement,
+                        radius: ATOM_RADIUS
+                    };
+                    atoms.push(newAtom);
+                }
+                drawCanvas();
+            }
+
+            function handleMove(evt) {
+                if (!isDragging) return;
+                evt.preventDefault();
+                const pos = getMousePos(evt);
+                atoms[draggedAtomIndex].x = pos.x;
+                atoms[draggedAtomIndex].y = pos.y;
+                drawCanvas();
+            }
+
+            function handleEnd(evt) {
+                evt.preventDefault();
+                if (!isDragging) return;
+                
+                const pos = getMousePos(Fevt.changedTouches ? evt.changedTouches[0] : evt);
+                const releasedOnAtomIndex = getAtomAt(pos.x, pos.y);
+                
+                if (releasedOnAtomIndex !== -1 && releasedOnAtomIndex !== draggedAtomIndex) {
+                    createBond(draggedAtomIndex, releasedOnAtomIndex);
+                } else {
+                    atoms[draggedAtomIndex].x = pos.x;
+                    atoms[draggedAtomIndex].y = pos.y;
+                }
+
+                isDragging = false;
+                draggedAtomIndex = -1;
+                drawCanvas();
+            }
+            
+            // --- Toolbar Listeners ---
+            const toolButtons = document.querySelectorAll('.tool-btn[data-atom]');
+            toolButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    toolButtons.forEach(b => b.classList.remove('active', 'bg-indigo-600', 'text-white'));
+                    btn.classList.add('active', 'bg-indigo-600', 'text-white');
+                    activeElement = btn.dataset.atom;
+                });
+            });
+
+            document.getElementById('tool-clear').addEventListener('click', () => {
+                atoms = [];
+                bonds = [];
+                nextAtomId = 0;
+                drawCanvas();
+            });
+            
+            document.getElementById('tool-predict').addEventListener('click', () => {
+                if (atoms.length < 2) {
+                    showMessage("Place at least 2 atoms to predict bonds.");
+                    return;
+                }
+                callBackendToPredictBonds();
+            });
+            
+            // --- Backend Prediction Logic ---
+            
+            // This is the URL where your local Python server will be running.
+            const BACKEND_URL = "http://127.0.0.1:5000/api/predict_bonds";
+
+            async function callBackendToPredictBonds() {
+                setLoading(true);
+                
+                // 1. Create the list of atoms
+                const atomList = atoms.map(atom => atom.element);
+
+                // 2. Construct the payload to send to our Python server
+                const payload = {
+                    atoms: atomList
+                };
+
+                // 3. Make the API call to our Python server
+                try {
+                    const response = await fetch(BACKEND_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const prediction = await response.json();
+                    applyPredictions(prediction);
+                    showMessage("Bonds predicted!", false);
+
+                } catch (error) {
+                    console.error("Backend Prediction Error:", error);
+                    // This error is expected in the preview environment
+                    showMessage("Failed to connect to Python server. (Is it running?)");
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            function applyPredictions(prediction) {
+                if (!prediction.bonds) return;
+
+                bonds = []; // Clear existing bonds
+
+                prediction.bonds.forEach(bond => {
+                    const atom1_idx = bond.from;
+                    const atom2_idx = bond.to;
+
+                    if (atom1_idx < atoms.length && atom2_idx < atoms.length) {
+                        const id1 = atoms[atom1_idx].id;
+                        const id2 = atoms[atom2_idx].id;
+                        const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
+                        if (!bondExists) {
+                            bonds.push({ atom1_id: id1, atom2_id: id2 });
+                        }
+                    }
+                });
+                drawCanvas();
+            }
+
+            // --- Canvas Event Listeners ---
+            canvas.addEventListener('mousedown', handleStart);
+            canvas.addEventListener('mousemove', handleMove);
+            canvas.addEventListener('mouseup', handleEnd);
+            canvas.addEventListener('mouseleave', handleEnd);
+            canvas.addEventListener('touchstart', handleStart);
+            canvas.addEventListener('touchmove', handleMove);
+            canvas.addEventListener('touchend', handleEnd);
+            canvas.addEventListener('touchcancel', handleEnd);
+
+            // --- Initial Load ---
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
