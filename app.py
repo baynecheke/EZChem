@@ -1,4 +1,5 @@
 import os
+import json
 import google.generativeai as genai
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -117,18 +118,15 @@ def handle_predict_bonds():
     atom_list = data['atoms']
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
+    # Build chemical formula: prefer C then H then alphabetical order
     atom_counts = Counter(atom_list)
     formula = ""
-
-    # Follow C, then H, then alphabetical order (like in the frontend)
     if 'C' in atom_counts:
         count = atom_counts.pop('C')
         formula += f"C{count if count > 1 else ''}"
     if 'H' in atom_counts:
         count = atom_counts.pop('H')
         formula += f"H{count if count > 1 else ''}"
-
-    # Add remaining elements alphabetically
     for element in sorted(atom_counts.keys()):
         count = atom_counts[element]
         formula += f"{element}{count if count > 1 else ''}"
@@ -140,7 +138,6 @@ def handle_predict_bonds():
             generation_config=json_generation_config
         )
         predicted_json = response.candidates[0].content.parts[0].text
-        import json
         return jsonify(json.loads(predicted_json))
     except Exception as e:
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
