@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molecule Sketchpad V2 (Frontend)</title>
+    <title>Molecule Sketchpad (Frontend)</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -228,7 +228,7 @@
                 evt.preventDefault();
                 if (!isDragging) return;
                 
-                const pos = getMousePos(Fevt.changedTouches ? evt.changedTouches[0] : evt);
+                const pos = getMousePos(evt.changedTouches ? evt.changedTouches[0] : evt);
                 const releasedOnAtomIndex = getAtomAt(pos.x, pos.y);
                 
                 if (releasedOnAtomIndex !== -1 && releasedOnAtomIndex !== draggedAtomIndex) {
@@ -270,21 +270,16 @@
             
             // --- Backend Prediction Logic ---
             
-            // This is the URL where your local Python server will be running.
-            const BACKEND_URL = "http://127.0.0.1:5000/api/predict_bonds";
+            // *** THIS IS THE IMPORTANT CHANGE ***
+            // We now use a relative path, which will point to our own server.
+            const BACKEND_URL = "/api/predict_bonds";
 
             async function callBackendToPredictBonds() {
                 setLoading(true);
                 
-                // 1. Create the list of atoms
                 const atomList = atoms.map(atom => atom.element);
+                const payload = { atoms: atomList };
 
-                // 2. Construct the payload to send to our Python server
-                const payload = {
-                    atoms: atomList
-                };
-
-                // 3. Make the API call to our Python server
                 try {
                     const response = await fetch(BACKEND_URL, {
                         method: 'POST',
@@ -303,8 +298,7 @@
 
                 } catch (error) {
                     console.error("Backend Prediction Error:", error);
-                    // This error is expected in the preview environment
-                    showMessage("Failed to connect to Python server. (Is it running?)");
+                    showMessage("Prediction failed: " + error.message);
                 } finally {
                     setLoading(false);
                 }
