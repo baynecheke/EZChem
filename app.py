@@ -1,6 +1,5 @@
 import os
 import google.generativeai as genai
-# === ADD THIS IMPORT ===
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
@@ -16,14 +15,13 @@ except Exception as e:
     print(f"Error configuring GenerativeAI: {e}")
 
 # --- Flask App Setup ---
-# === TELL FLASK ABOUT THE 'static' FOLDER ===
 app = Flask(__name__, static_folder='static')
 CORS(app) 
 
-# --- AI Model Setup (Your code, all good) ---
+# --- AI Model Setup ---
 
-# Define the System Prompt *before* the model
-SYSTEM_PROMPT = """
+# Model for JSON/Chemistry Predictions
+CHEMISTRY_PROMPT = """
 You are a chemistry expert. A user will provide a list of atoms. 
 Your task is to predict the most likely stable bonding structure for these atoms.
 Respond *only* with a JSON object that adheres to the provided schema. 
@@ -31,13 +29,10 @@ Do not include any other text or markdown formatting.
 The 'from' and 'to' fields in the bonds should be 0-based indices 
 corresponding to the user's input atom list.
 """
-
-# === FIX 1: Pass the system prompt string directly to the model constructor ===
-model = genai.GenerativeModel(
-    'gemini-1.5-flash',
-    system_instruction=SYSTEM_PROMPT
+json_model = genai.GenerativeModel(
+    'gemini-2.5-flash-preview-09-2025',
+    system_instruction=CHEMISTRY_PROMPT
 )
-
 CHEMISTRY_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -56,34 +51,28 @@ CHEMISTRY_SCHEMA = {
     },
     "required": ["bonds"]
 }
-
-generation_config = genai.GenerationConfig(
+json_generation_config = genai.GenerationConfig(
     response_mime_type="application/json",
     response_schema=CHEMISTRY_SCHEMA
 )
 
-# === FIX 2: This dictionary is no longer needed ===
-# system_instruction = {"parts": [{"text": SYSTEM_PROMPT}]}
+# Model for Text/Fun Facts
+text_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
 
-
-# --- === ADD THIS NEW ROUTE TO SERVE THE HTML FILE === ---
+# --- Frontend Route ---
 @app.route('/')
 def serve_frontend():
     """
     Serves the User_Interface.html file from the 'static' folder.
     """
-    # === FIX FOR PYLANCE ERROR ===
-    # Pylance correctly notes that app.static_folder *could* be None.
-    # We add a check to handle this, even though our app's setup
-    # ensures it will always be 'static'.
+    # === FIX: Added check for None to satisfy Pylance/make code safer ===
     if app.static_folder is None:
-        # This should never be reached in our app
         return "Server configuration error: Static folder not found.", 500
         
     return send_from_directory(app.static_folder, 'User_Interface.html')
 
 
-# --- API Endpoint (Your existing code, all good) ---
+# --- API Endpoint 1: Predict Bonds ---
 @app.route('/api/predict_bonds', methods=['POST'])
 def handle_predict_bonds():
     """
@@ -103,10 +92,9 @@ def handle_predict_bonds():
     user_query = f"Atoms: {str(atom_list)}"
     
     try:
-        # === FIX 3: Remove the invalid system_instruction argument ===
-        response = model.generate_content(
+        response = json_model.generate_content(
             user_query,
-            generation_config=generation_config
+            generation_config=json_generation_config
         )
         predicted_json = response.candidates[0].content.parts[0].text
         import json
@@ -116,9 +104,35 @@ def handle_predict_bonds():
         print(f"An error occurred calling the Gemini API: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
 
+# --- API Endpoint 2: Get Fun Fact (NEW) ---
+@app.route('/api/get_fun_fact', methods=['POST'])
+def get_fun_fact():
+    """
+    Receives an element symbol and returns a fun fact.
+    """
+    if not API_KEY:
+        return jsonify({"error": "Server is missing GEMINI_API_KEY"}), 500
+
+    data = request.get_json()
+    if not data or 'element' not in data:
+        return jsonify({"error": "Invalid request: 'element' missing"}), 400
+
+    element_name = data['element']
+    
+    # Simple prompt for a text-only response
+    prompt = f"Tell me a single, one-sentence fun fact about the element {element_name}. Respond with only the fact, nothing else."
+
+    try:
+        response = text_model.generate_content(prompt)
+        fact = response.candidates[0].content.parts[0].text
+        return jsonify({"fact": fact.strip()})
+
+    except Exception as e:
+        print(f"An error occurred calling the Gemini API for a fact: {e}")
+        return jsonify({"error": f"AI fact generation failed: {e}"}), 500
+
+
 # --- Run the Server ---
 if __name__ == '__main__':
-    # Render will use the gunicorn command instead of this
     print("Starting Python Flask server for molecule prediction...")
-    print("Access at http://127.0.0.1:5000")
     app.run(port=5000, debug=True)
