@@ -172,13 +172,27 @@ def get_molecule_info():
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
     
     atom_list = data['atoms']
-    user_query = f"Atom list: {str(atom_list)}"
     
+    # --- Start of new logic ---
+    # Calculate chemical formula to help the AI (same as predict_bonds)
+    atom_counts = Counter(atom_list)
+    formula = ""
+    if 'C' in atom_counts:
+        count = atom_counts.pop('C')
+        formula += f"C{count if count > 1 else ''}"
+    if 'H' in atom_counts:
+        count = atom_counts.pop('H')
+        formula += f"H{count if count > 1 else ''}"
+    for element in sorted(atom_counts.keys()):
+        count = atom_counts[element]
+        formula += f"{element}{count if count > 1 else ''}"
+
+    user_query = f"Analyze the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
+    # --- End of new logic ---
+
+    # --- This entire block is now indented ---
     try:
-        response = info_model.generate_content(
-            user_query,
-            generation_config=info_generation_config
-        )
+        response = info_model.generate_content(user_query, generation_config=info_generation_config )
         import json
         info_json = json.loads(response.candidates[0].content.parts[0].text)
         return jsonify(info_json)
