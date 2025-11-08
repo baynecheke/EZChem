@@ -21,7 +21,23 @@ app = Flask(__name__, static_folder='static')
 CORS(app) 
 
 # --- AI Model Setup (Your code, all good) ---
-model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
+
+# Define the System Prompt *before* the model
+SYSTEM_PROMPT = """
+You are a chemistry expert. A user will provide a list of atoms. 
+Your task is to predict the most likely stable bonding structure for these atoms.
+Respond *only* with a JSON object that adheres to the provided schema. 
+Do not include any other text or markdown formatting.
+The 'from' and 'to' fields in the bonds should be 0-based indices 
+corresponding to the user's input atom list.
+"""
+
+# === FIX 1: Pass the system prompt string directly to the model constructor ===
+model = genai.GenerativeModel(
+    'gemini-2.5-flash-preview-09-2025',
+    system_instruction=SYSTEM_PROMPT
+)
+
 CHEMISTRY_SCHEMA = {
     "type": "OBJECT",
     "properties": {
@@ -40,19 +56,15 @@ CHEMISTRY_SCHEMA = {
     },
     "required": ["bonds"]
 }
-SYSTEM_PROMPT = """
-You are a chemistry expert. A user will provide a list of atoms. 
-Your task is to predict the most likely stable bonding structure for these atoms.
-Respond *only* with a JSON object that adheres to the provided schema. 
-Do not include any other text or markdown formatting.
-The 'from' and 'to' fields in the bonds should be 0-based indices 
-corresponding to the user's input atom list.
-"""
+
 generation_config = genai.GenerationConfig(
     response_mime_type="application/json",
     response_schema=CHEMISTRY_SCHEMA
 )
-system_instruction = {"parts": [{"text": SYSTEM_PROMPT}]}
+
+# === FIX 2: This dictionary is no longer needed ===
+# system_instruction = {"parts": [{"text": SYSTEM_PROMPT}]}
+
 
 # --- === ADD THIS NEW ROUTE TO SERVE THE HTML FILE === ---
 @app.route('/')
@@ -83,10 +95,10 @@ def handle_predict_bonds():
     user_query = f"Atoms: {str(atom_list)}"
     
     try:
+        # === FIX 3: Remove the invalid system_instruction argument ===
         response = model.generate_content(
             user_query,
-            generation_config=generation_config,
-            system_instruction=system_instruction
+            generation_config=generation_config
         )
         predicted_json = response.candidates[0].content.parts[0].text
         import json
