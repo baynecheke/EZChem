@@ -73,7 +73,7 @@ json_generation_config = genai.GenerationConfig(
 # Model 2: Text/Fun Facts
 text_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
 
-# Model 3: Molecule Info (NEW)
+# Model 3: Molecule Info
 INFO_PROMPT = """
 You are a brilliant chemist and data analyst. A user will provide a list of atoms.
 Your task is to analyze this list and return structured information about the most
@@ -105,6 +105,8 @@ info_generation_config = genai.GenerationConfig(
 def serve_frontend():
     if app.static_folder is None:
         return "Server configuration error: Static folder not found.", 500
+    # This assumes your HTML file is named User_Interface.html and is in a 'static' folder
+    # If not, adjust the 'static_folder' in app = Flask(__name__, static_folder='static')
     return send_from_directory(app.static_folder, 'User_Interface.html')
 
 # --- API Endpoint 1: Predict Bonds ---
@@ -118,7 +120,8 @@ def handle_predict_bonds():
     atom_list = data['atoms']
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
-    # Build chemical formula: prefer C then H then alphabetical order
+    
+    # Build chemical formula to help AI
     atom_counts = Counter(atom_list)
     formula = ""
     if 'C' in atom_counts:
@@ -137,9 +140,10 @@ def handle_predict_bonds():
             user_query,
             generation_config=json_generation_config
         )
-        predicted_json = response.candidates[0].content.parts[0].text
-        return jsonify(json.loads(predicted_json))
+        predicted_json_text = response.candidates[0].content.parts[0].text
+        return jsonify(json.loads(predicted_json_text))
     except Exception as e:
+        print(f"An error occurred calling the Gemini API for bonds: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
 
 # --- API Endpoint 2: Get Fun Fact ---
@@ -157,9 +161,10 @@ def get_fun_fact():
         fact = response.candidates[0].content.parts[0].text
         return jsonify({"fact": fact.strip()})
     except Exception as e:
+        print(f"An error occurred calling the Gemini API for fact: {e}")
         return jsonify({"error": f"AI fact generation failed: {e}"}), 500
 
-# --- API Endpoint 3: Get Molecule Info (NEW) ---
+# --- API Endpoint 3: Get Molecule Info ---
 @app.route('/api/get_molecule_info', methods=['POST'])
 def get_molecule_info():
     if not API_KEY:
@@ -170,8 +175,7 @@ def get_molecule_info():
     
     atom_list = data['atoms']
     
-    # --- Start of new logic ---
-    # Calculate chemical formula to help the AI (same as predict_bonds)
+    # Calculate chemical formula to help the AI
     atom_counts = Counter(atom_list)
     formula = ""
     if 'C' in atom_counts:
@@ -185,24 +189,21 @@ def get_molecule_info():
         formula += f"{element}{count if count > 1 else ''}"
 
     user_query = f"Analyze the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
-    # --- End of new logic ---
 
-    # --- This entire block is now indented ---
     try:
-            response = info_model.generate_content(user_query, generation_config=info_generation_config )
-            
-            # Get the text part of the response
-            info_text = response.candidates[0].content.parts[0].text
-            
-            # Parse and return it in one step, just like the other endpoint
-            return jsonify(json.loads(info_text))
-            
+        response = info_model.generate_content(user_query, generation_config=info_generation_config )
+        
+        # **This is the fix from our previous conversation**
+        info_text = response.candidates[0].content.parts[0].text
+        return jsonify(json.loads(info_text))
+        
     except Exception as e:
-            print(f"An error occurred calling the Gemini API for info: {e}")
-            return jsonify({"error": f"AI info generation failed: {e}"}), 500
+        print(f"An error occurred calling the Gemini API for info: {e}")
+        return jsonify({"error": f"AI info generation failed: {e}"}), 500
 
 
 # --- Run the Server ---
 if __name__ == '__main__':
     print("Starting Python Flask server for molecule prediction...")
+    # Make sure the 'static' folder exists and User_Interface.html is inside it.
     app.run(port=5000, debug=True)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molecule Sketchpad V5 (Group Info)</title>
+    <title>Molecule Sketchpad V6 (Grid System)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body, html {
@@ -13,8 +13,10 @@
         }
         canvas {
             touch-action: none;
-            cursor: crosshair;
+            /* No cursor, we will draw our own */
+            cursor: none; 
             display: block;
+            background-color: #ffffff;
         }
         .tool-btn.active {
             @apply bg-indigo-600 text-white shadow-inner;
@@ -28,6 +30,7 @@
 </head>
 <body class="h-full flex flex-col antialiased">
 
+    <!-- Header Bar (Unchanged) -->
     <div class="bg-gray-800 text-white p-2 shadow-md flex items-center gap-4">
         <h1 class="text-xl font-bold text-center">EZChem</h1>
         <div class="relative flex-1 max-w-md mx-auto">
@@ -44,6 +47,7 @@
 
     <div class="flex-1 flex flex-row p-4 gap-4 h-full min-h-0">
 
+        <!-- Toolbar (Unchanged) -->
         <div class="flex flex-col items-center bg-white p-2 rounded-lg shadow-lg gap-2 w-20">
             <h2 class="text-sm font-semibold text-center text-gray-600">Atoms</h2>
             
@@ -55,7 +59,7 @@
             <div class="w-full border-t border-gray-200 my-2"></div>
             <h2 class="text-sm font-semibold text-center text-gray-600">Actions</h2>
 
-            <button id="tool-group" class="tool-btn w-full h-16 rounded-lg bg-purple-500 text-white p-2 shadow-md flex items-center justify-center" title="Group Tool">
+            <button id="tool-group" class="tool-btn w-full h-16 rounded-lg bg-purple-500 text-white p-2 shadow-md flex items-center justify-center" title="Group Tool (Drag to create molecule box)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
                 </svg>
@@ -69,7 +73,7 @@
 
             <button id="tool-predict" class="tool-btn relative w-full h-16 rounded-lg bg-green-500 text-white p-2 shadow-md flex items-center justify-center" title="Predict Bonds (within groups)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M12 21v-1m0-10c-1.657 0-3 2.239-3 5s1.343 5 3 5 3-2.239 3-5-1.343-5-3-5z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707.707M12 21v-1m0-10c-1.657 0-3 2.239-3 5s1.343 5 3 5 3-2.239 3-5-1.343-5-3-5z" />
                 </svg>
                 <div id="loading-spinner" class="absolute inset-0 bg-green-500 bg-opacity-80 flex items-center justify-center rounded-lg hidden">
                     <svg class="animate-spin size-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -86,12 +90,14 @@
             </button>
         </div>
 
+        <!-- Canvas Area -->
         <div class="flex-1 bg-white rounded-lg shadow-lg h-full overflow-hidden">
             <canvas id="sketchpad"></canvas>
         </div>
 
     </div>
 
+    <!-- Modals (Unchanged) -->
     <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden z-50">
         <span id="message-text"></span>
     </div>
@@ -109,6 +115,7 @@
             <div class="space-y-2">
                 <p><strong>Atom ID:</strong> <span id="modal-atom-id"></span></p>
                 <p><strong>Element:</strong> <span id="modal-atom-element"></span></p>
+                <p><strong>Grid Cell:</strong> <span id="modal-atom-grid"></span></p>
                 <p><strong>Bonds:</strong> <span id="modal-atom-bonds"></span></p>
             </div>
             <div class="mt-4 pt-4 border-t">
@@ -168,7 +175,7 @@
             { n: 53, s: "I", name: "Iodine" }, { n: 54, s: "Xe", name: "Xenon" }, { n: 55, s: "Cs", name: "Caesium" }, { n: 56, s: "Ba", name: "Barium" },
             { n: 57, s: "La", name: "Lanthanum" }, { n: 58, s: "Ce", name: "Cerium" }, { n: 59, s: "Pr", name: "Praseodymium" }, { n: 60, s: "Nd", name: "Neodymium" },
             { n: 61, s: "Pm", name: "Promethium" }, { n: 62, s: "Sm", name: "Samarium" }, { n: 63, s: "Eu", name: "Europium" }, { n: 64, s: "Gd", name: "Gadolinium" },
-            { n: 65, s: "Tb", name: "Terbium" }, { n: 66, s: "Dy", name: "Dysprosium" }, { n: 67, s: "Ho", name: "Holmium" }, { n: 68, s: "Er", name: "Erbium" },
+            { n: 65, s: "Tb", name: "Terbium" }, { n: 66, s: "Dy", name: "Dysproslum" }, { n: 67, s: "Ho", name: "Holmium" }, { n: 68, s: "Er", name: "Erbium" },
             { n: 69, s: "Tm", name: "Thulium" }, { n: 70, s: "Yb", name: "Ytterbium" }, { n: 71, s: "Lu", name: "Lutetium" }, { n: 72, s: "Hf", name: "Hafnium" },
             { n: 73, s: "Ta", name: "Tantalum" }, { n: 74, s: "W", name: "Tungsten" }, { n: 75, s: "Re", name: "Rhenium" }, { n: 76, s: "Os", name: "Osmium" },
             { n: 77, s: "Ir", name: "Iridium" }, { n: 78, s: "Pt", name: "Platinum" }, { n: 79, s: "Au", name: "Gold" }, { n: 80, s: "Hg", name: "Mercury" },
@@ -183,42 +190,39 @@
             const canvas = document.getElementById('sketchpad');
             const ctx = canvas.getContext('2d');
             
-            // --- App State ---
-            let atoms = []; // { id, x, y, element, radius }
-            let bonds = []; // { atom1_id, atom2_id }
-            let groups = []; // V4: { x, y, w, h }
-            let activeTool = 'C'; 
-            let nextAtomId = 0;
-            const ATOM_RADIUS = 20;
-
-            // --- Canvas Transform State ---
-            let scale = 1;
-            let panX = 0;
-            let panY = 0;
-            let isPanning = false;
-            let lastPanPos = { x: 0, y: 0 };
-
-            // --- Dragging State ---
-            let isDraggingAtom = false;
-            let draggedAtomIndex = -1;
-            let isGrouping = false; // V4: Are we drawing a group box?
-            let groupStartPos = { x: 0, y: 0 };
-            let currentGroupRect = null; // V4: { x, y, w, h }
-
-            // --- Atom colors (CPK) ---
+            // --- Grid System Config ---
+            const GRID_SIZE = 40; // Size of each grid cell in pixels
+            const ATOM_RADIUS = GRID_SIZE * 0.4; // 40% of the cell size
             const ATOM_COLORS = { 'C': '#333333', 'H': '#CCCCCC', 'O': '#FF0D0D', 'N': '#3050F8', 'DEFAULT': '#888888' };
             
+            // --- App State ---
+            // Atoms and groups are now stored in GRID coordinates, not pixel coordinates
+            let atoms = []; // { id, row, col, element }
+            let bonds = []; // { atom1_id, atom2_id }
+            let groups = []; // { x, y, w, h } (in grid units)
+            
+            let activeTool = 'C'; 
+            let nextAtomId = 0;
+
+            // --- Mouse/Drag State ---
+            let isMouseDown = false;
+            let dragStartPos = { row: 0, col: 0 }; // In grid units
+            let currentGridPos = { row: 0, col: 0 }; // In grid units
+            let tempDragRect = null; // { x, y, w, h } (in grid units)
+            let isMouseOnCanvas = false;
+
             // --- UI Elements ---
             const loadingSpinner = document.getElementById('loading-spinner');
             const messageBox = document.getElementById('message-box');
             const messageText = document.getElementById('message-text');
             const searchInput = document.getElementById('search-input');
             const searchResults = document.getElementById('search-results');
+            // Atom Modal
             const atomInfoModal = document.getElementById('atom-info-modal');
             const modalCloseBtn = document.getElementById('modal-close-btn');
             const modalFunFactBtn = document.getElementById('modal-fun-fact-btn');
             const modalFunFactText = document.getElementById('modal-fun-fact-text');
-            // V5 Elements
+            // Group Modal
             const groupInfoModal = document.getElementById('group-info-modal');
             const groupModalCloseBtn = document.getElementById('group-modal-close-btn');
             const modalGroupFormula = document.getElementById('modal-group-formula');
@@ -235,92 +239,139 @@
                 drawCanvas(); 
             }
 
-            // --- Drawing Functions ---
-            function drawCanvas() {
-                ctx.save();
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Apply pan and zoom
-                ctx.translate(panX, panY);
-                ctx.scale(scale, scale);
-
-                // 1. Draw Groups (V4)
-                ctx.fillStyle = 'rgba(139, 92, 246, 0.1)'; // purple-500 with 10% opacity
-                ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // purple-500 with 50% opacity
-                ctx.lineWidth = 2 / scale; // Scale line width
-                groups.forEach(group => {
-                    ctx.fillRect(group.x, group.y, group.w, group.h);
-                    ctx.strokeRect(group.x, group.y, group.w, group.h);
-                });
-
-                // 2. Draw Bonds
-                ctx.strokeStyle = '#666666';
-                ctx.lineWidth = 4 / scale; // Scale line width
-                bonds.forEach(bond => {
-                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
-                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
-                    if (atom1 && atom2) {
-                        ctx.beginPath();
-                        ctx.moveTo(atom1.x, atom1.y);
-                        ctx.lineTo(atom2.x, atom2.y);
-                        ctx.stroke();
-                    }
-                });
-
-                // 3. Draw Atoms
-                atoms.forEach(atom => {
-                    ctx.beginPath();
-                    // Scale atom radius, but make it less sensitive
-                    const displayRadius = ATOM_RADIUS / Math.max(1, Math.min(scale, 1.5));
-                    ctx.arc(atom.x, atom.y, displayRadius, 0, 2 * Math.PI);
-                    const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    
-                    ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
-                    // Scale font size, but keep it readable
-                    const fontSize = Math.max(12, 18 / scale);
-                    ctx.font = `bold ${fontSize}px Inter`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(atom.element, atom.x, atom.y);
-                });
-
-                // 4. Draw temporary grouping box (V4)
-                if (isGrouping && currentGroupRect) {
-                    ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)';
-                    ctx.lineWidth = 2 / scale;
-                    ctx.setLineDash([5 / scale, 5 / scale]);
-                    ctx.strokeRect(currentGroupRect.x, currentGroupRect.y, currentGroupRect.w, currentGroupRect.h);
-                    ctx.setLineDash([]);
-                }
-                
-                ctx.restore();
-            }
-
-            // --- Coordinate Helper ---
-            function getMousePos(evt) {
+            // --- Coordinate Helpers ---
+            function getMouseGridPos(evt) {
                 const rect = canvas.getBoundingClientRect();
                 const clientX = evt.clientX ?? evt.touches[0]?.clientX ?? evt.changedTouches?.[0]?.clientX;
                 const clientY = evt.clientY ?? evt.touches[0]?.clientY ?? evt.changedTouches?.[0]?.clientY;
                 
-                const worldX = (clientX - rect.left - panX) / scale;
-                const worldY = (clientY - rect.top - panY) / scale;
+                // Pixel position relative to canvas
+                const pixelX = clientX - rect.left;
+                const pixelY = clientY - rect.top;
                 
-                return { x: worldX, y: worldY, clientX, clientY };
+                // Convert pixel position to grid position
+                const col = Math.floor(pixelX / GRID_SIZE);
+                const row = Math.floor(pixelY / GRID_SIZE);
+                
+                return { row, col };
             }
-            
-            function getAtomAt(worldX, worldY) {
-                for (let i = atoms.length - 1; i >= 0; i--) {
-                    const atom = atoms[i];
-                    // Use display radius for click detection
-                    const displayRadius = ATOM_RADIUS / Math.max(1, Math.min(scale, 1.5));
-                    const dist = Math.sqrt((worldX - atom.x) ** 2 + (worldY - atom.y) ** 2);
-                    if (dist < displayRadius) {
-                        return i;
+
+            function gridToPixel(row, col) {
+                // Returns the CENTER pixel of a grid cell
+                const x = (col * GRID_SIZE) + (GRID_SIZE / 2);
+                const y = (row * GRID_SIZE) + (GRID_SIZE / 2);
+                return { x, y };
+            }
+
+            function getAtomAt(row, col) {
+                return atoms.find(a => a.row === row && a.col === col);
+            }
+
+            // --- Drawing Functions ---
+            function drawCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 1. Draw Grid Lines
+                ctx.strokeStyle = '#f0f0f0'; // Light gray
+                ctx.lineWidth = 1;
+                for (let x = 0; x < canvas.width; x += GRID_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < canvas.height; y += GRID_SIZE) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+
+                // 2. Draw Groups
+                ctx.fillStyle = 'rgba(139, 92, 246, 0.1)'; // purple-500 10%
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // purple-500 50%
+                ctx.lineWidth = 2;
+                groups.forEach(group => {
+                    const { x, y, w, h } = normalizeRect(group.x, group.y, group.w, group.h);
+                    // Convert grid units to pixels
+                    ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
+                    ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
+                });
+
+                // 3. Draw Bonds
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 4;
+                bonds.forEach(bond => {
+                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
+                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
+                    if (atom1 && atom2) {
+                        const pos1 = gridToPixel(atom1.row, atom1.col);
+                        const pos2 = gridToPixel(atom2.row, atom2.col);
+                        ctx.beginPath();
+                        ctx.moveTo(pos1.x, pos1.y);
+                        ctx.lineTo(pos2.x, pos2.y);
+                        ctx.stroke();
+                    }
+                });
+
+                // 4. Draw Atoms
+                atoms.forEach(atom => {
+                    const pos = gridToPixel(atom.row, atom.col);
+                    const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
+                    
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
+                    ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`; // Scaled font
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(atom.element, pos.x, pos.y);
+                });
+
+                // 5. Draw Temporary Drag Box (if dragging)
+                if (isMouseDown && tempDragRect) {
+                    const { x, y, w, h } = normalizeRect(tempDragRect.x, tempDragRect.y, tempDragRect.w, tempDragRect.h);
+                    const isGroupTool = activeTool === 'group';
+                    
+                    ctx.fillStyle = isGroupTool ? 'rgba(139, 92, 246, 0.2)' : 'rgba(100, 100, 100, 0.2)';
+                    ctx.strokeStyle = isGroupTool ? 'rgba(139, 92, 246, 0.8)' : 'rgba(50, 50, 50, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
+                    ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
+                    ctx.setLineDash([]);
+                }
+                
+                // 6. Draw "Ghost" Cursor
+                if (isMouseOnCanvas) {
+                    const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
+                    const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
+
+                    if (isAtomTool) {
+                        // Draw a ghost atom
+                        ctx.globalAlpha = 0.5;
+                        const color = ATOM_COLORS[activeTool] || ATOM_COLORS.DEFAULT;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                        
+                        ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
+                        ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(activeTool, pos.x, pos.y);
+                        ctx.globalAlpha = 1.0;
+                    } else {
+                        // Draw a simple box cursor for other tools
+                        ctx.strokeStyle = '#333333';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(currentGridPos.col * GRID_SIZE, currentGridPos.row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                     }
                 }
-                return -1;
             }
             
             // --- UI Helpers ---
@@ -332,147 +383,99 @@
                 messageBox.classList.remove('hidden');
                 setTimeout(() => { messageBox.classList.add('hidden'); }, 3000);
             }
+            function normalizeRect(x, y, w, h) {
+                let rx = x, ry = y, rw = w, rh = h;
+                if (w < 0) { rx = x + w; rw = -w; }
+                if (h < 0) { ry = y + h; rh = -h; }
+                return { x: rx, y: ry, w: rw, h: rh };
+            }
 
-            // --- Event Handlers (V5) ---
+            // --- Event Handlers (Grid System) ---
             function handleStart(evt) {
                 evt.preventDefault();
-                const pos = getMousePos(evt);
+                isMouseDown = true;
+                const { row, col } = getMouseGridPos(evt);
+                currentGridPos = { row, col };
+                dragStartPos = { row, col };
                 
-                if (evt.button === 2 || (evt.touches && evt.touches.length === 2)) { 
-                    isPanning = true;
-                    lastPanPos = { x: pos.clientX, y: pos.clientY };
-                    return;
-                }
+                const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
 
-                const clickedAtomIndex = getAtomAt(pos.x, pos.y);
-                
                 if (activeTool === 'info') {
-                    if (clickedAtomIndex !== -1) {
-                        // Priority 1: Clicked an atom
-                        openAtomInfoModal(atoms[clickedAtomIndex]);
-                    } else {
-                        // Priority 2: Clicked a group (V5)
-                        const clickedGroupIndex = getGroupAt(pos.x, pos.y);
-                        if (clickedGroupIndex !== -1) {
-                            openGroupInfoModal(groups[clickedGroupIndex]);
-                        }
+                    // Check for atom first
+                    const atom = getAtomAt(row, col);
+                    if (atom) {
+                        openAtomInfoModal(atom);
+                        isMouseDown = false; // Don't start a drag
+                        return;
                     }
-                    return;
+                    // Check for group
+                    const group = getGroupAt(row, col);
+                    if (group) {
+                        openGroupInfoModal(group);
+                        isMouseDown = false;
+                        return;
+                    }
+                    return; // Do nothing if blank space
                 }
                 
-                if (activeTool === 'group') { // V4
-                    isGrouping = true;
-                    groupStartPos = { x: pos.x, y: pos.y };
-                    currentGroupRect = { x: pos.x, y: pos.y, w: 0, h: 0 };
-                    return;
-                }
-                
-                if (clickedAtomIndex !== -1) {
-                    isDraggingAtom = true;
-                    draggedAtomIndex = clickedAtomIndex;
-                } else {
-                    const newAtom = {
-                        id: nextAtomId++,
-                        x: pos.x,
-                        y: pos.y,
-                        element: activeTool,
-                        radius: ATOM_RADIUS
-                    };
-                    atoms.push(newAtom);
-                }
+                // Start a drag rectangle
+                tempDragRect = { x: col, y: row, w: 1, h: 1 };
                 drawCanvas();
             }
 
             function handleMove(evt) {
                 evt.preventDefault();
-                const pos = getMousePos(evt);
-
-                if (isPanning) {
-                    const deltaX = pos.clientX - lastPanPos.x;
-                    const deltaY = pos.clientY - lastPanPos.y;
-                    panX += deltaX;
-                    panY += deltaY;
-                    lastPanPos = { x: pos.clientX, y: pos.clientY };
-                    drawCanvas();
-                    return;
+                const { row, col } = getMouseGridPos(evt);
+                currentGridPos = { row, col };
+                
+                if (isMouseDown) {
+                    // Update the temporary drag rectangle
+                    tempDragRect.w = (col - dragStartPos.col) + 1;
+                    tempDragRect.h = (row - dragStartPos.row) + 1;
                 }
                 
-                if (isGrouping) { // V4
-                    currentGroupRect.w = pos.x - groupStartPos.x;
-                    currentGroupRect.h = pos.y - groupStartPos.y;
-                    drawCanvas();
-                    return;
-                }
-                
-                if (!isDraggingAtom) return;
-                atoms[draggedAtomIndex].x = pos.x;
-                atoms[draggedAtomIndex].y = pos.y;
                 drawCanvas();
             }
 
             function handleEnd(evt) {
                 evt.preventDefault();
+                if (!isMouseDown) return;
+                isMouseDown = false;
                 
-                if (isPanning) {
-                    isPanning = false;
-                    return;
-                }
+                const { row, col } = getMouseGridPos(evt);
+                const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
                 
-                if (isGrouping) { // V4
-                    isGrouping = false;
-                    // Normalize the rect (width/height can be negative)
-                    const x = Math.min(groupStartPos.x, groupStartPos.x + currentGroupRect.w);
-                    const y = Math.min(groupStartPos.y, groupStartPos.y + currentGroupRect.h);
-                    const w = Math.abs(currentGroupRect.w);
-                    const h = Math.abs(currentGroupRect.h);
-                    
-                    if (w > 10 && h > 10) { // Only add if it's a decent size
-                        groups.push({ x, y, w, h });
-                    }
-                    currentGroupRect = null;
-                    drawCanvas();
-                    return;
-                }
-                
-                if (!isDraggingAtom) return;
-                
-                const pos = getMousePos(evt);
-                const releasedOnAtomIndex = getAtomAt(pos.x, pos.y);
-                
-                if (releasedOnAtomIndex !== -1 && releasedOnAtomIndex !== draggedAtomIndex) {
-                    // Manually create bond
-                    const id1 = atoms[draggedAtomIndex].id;
-                    const id2 = atoms[releasedOnAtomIndex].id;
-                    if (!bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1))) {
-                        bonds.push({ atom1_id: id1, atom2_id: id2, type: "SINGLE" });
-                    }
-                } else {
-                    atoms[draggedAtomIndex].x = pos.x;
-                    atoms[draggedAtomIndex].y = pos.y;
-                }
+                if (tempDragRect) {
+                    const { x, y, w, h } = normalizeRect(tempDragRect.x, tempDragRect.y, tempDragRect.w, tempDragRect.h);
 
-                isDraggingAtom = false;
-                draggedAtomIndex = -1;
-                drawCanvas();
-            }
-
-            function handleWheel(evt) {
-                evt.preventDefault();
-                const pos = getMousePos(evt);
-                const rect = canvas.getBoundingClientRect(); 
+                    if (isAtomTool) {
+                        // --- Fill Atom Logic ---
+                        for (let r = y; r < y + h; r++) {
+                            for (let c = x; c < x + w; c++) {
+                                // Add atom if cell is empty
+                                if (!getAtomAt(r, c)) {
+                                    atoms.push({
+                                        id: nextAtomId++,
+                                        row: r,
+                                        col: c,
+                                        element: activeTool
+                                    });
+                                }
+                            }
+                        }
+                    } else if (activeTool === 'group') {
+                        // --- Add Group Logic ---
+                        if (w > 0 && h > 0) { // Only add if it's a valid rect
+                            groups.push({ x, y, w, h });
+                        }
+                    }
+                }
                 
-                const zoomFactor = 0.1;
-                const wheel = evt.deltaY < 0 ? 1 : -1;
-                const newScale = Math.max(0.2, Math.min(scale + wheel * zoomFactor * scale, 5));
-                
-                panX = panX - (pos.clientX - rect.left - panX) * (newScale / scale - 1);
-                panY = panY - (pos.clientY - rect.top - panY) * (newScale / scale - 1);
-                
-                scale = newScale;
+                tempDragRect = null;
                 drawCanvas();
             }
             
-            // --- Toolbar Listeners (V4) ---
+            // --- Toolbar Listeners ---
             document.querySelectorAll('.tool-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -482,20 +485,17 @@
                         activeTool = btn.dataset.atom;
                     } else if (btn.id === 'tool-info') {
                         activeTool = 'info';
-                    } else if (btn.id === 'tool-group') { // V4
+                    } else if (btn.id === 'tool-group') {
                         activeTool = 'group';
                     } else {
                         // Handle predict/clear
                         if (btn.id === 'tool-predict') {
-                            callBackendToPredictBonds(); // V4 logic is inside this func
+                            callBackendToPredictBonds();
                         } else if (btn.id === 'tool-clear') {
                             atoms = [];
                             bonds = [];
-                            groups = []; // V4
+                            groups = [];
                             nextAtomId = 0;
-                            scale = 1;
-                            panX = 0;
-                            panY = 0;
                             drawCanvas();
                         }
                         // De-select action buttons after click
@@ -504,7 +504,7 @@
                 });
             });
 
-            // --- Search Logic ---
+            // --- Search Logic (Unchanged) ---
             function performSearch(query) {
                 if (!query) {
                     searchResults.innerHTML = '';
@@ -566,11 +566,12 @@
                 }
             });
 
-            // --- Atom Info Modal Logic (V3) ---
+            // --- Atom Info Modal Logic ---
             function openAtomInfoModal(atom) {
                 document.getElementById('modal-atom-name').innerText = PERIODIC_TABLE.find(el => el.s === atom.element)?.name || atom.element;
                 document.getElementById('modal-atom-id').innerText = atom.id;
                 document.getElementById('modal-atom-element').innerText = atom.element;
+                document.getElementById('modal-atom-grid').innerText = `Row: ${atom.row}, Col: ${atom.col}`;
                 
                 const bondCount = bonds.filter(b => b.atom1_id === atom.id || b.atom2_id === atom.id).length;
                 document.getElementById('modal-atom-bonds').innerText = bondCount;
@@ -611,18 +612,18 @@
                 }
             });
 
-            // --- Group Info Modal Logic (V5) ---
-            function getGroupAt(worldX, worldY) {
+            // --- Group Info Modal Logic ---
+            function getGroupAt(row, col) {
                 // Find in reverse so we get the top-most group
                 for (let i = groups.length - 1; i >= 0; i--) {
                     const group = groups[i];
-                    // Check if click is inside the group box
-                    if (worldX >= group.x && worldX <= group.x + group.w &&
-                        worldY >= group.y && worldY <= group.y + group.h) {
-                        return i; // Return the index
+                    const { x, y, w, h } = normalizeRect(group.x, group.y, group.w, group.h);
+                    // Check if click is inside the group box (grid units)
+                    if (col >= x && col < x + w && row >= y && row < y + h) {
+                        return group; // Return the group object
                     }
                 }
-                return -1; // No group found
+                return null; // No group found
             }
 
             function calculateFormula(atomList) {
@@ -651,27 +652,26 @@
                 return formula;
             }
 
-            function openGroupInfoModal(group) {
-                // 1. Find all atoms in this group
-                const atomsInGroup = atoms.filter(atom => 
-                    atom.x >= group.x && atom.x <= group.x + group.w &&
-                    atom.y >= group.y && atom.y <= group.h
+            function getAtomsInGroup(group) {
+                const { x, y, w, h } = normalizeRect(group.x, group.y, group.w, group.h);
+                return atoms.filter(atom => 
+                    atom.col >= x && atom.col < x + w &&
+                    atom.row >= y && atom.row < y + h
                 );
-                
+            }
+
+            function openGroupInfoModal(group) {
+                const atomsInGroup = getAtomsInGroup(group);
                 const atomList = atomsInGroup.map(atom => atom.element);
                 
-                // 2. Calculate and set formula locally
                 modalGroupFormula.innerText = calculateFormula(atomList);
-
-                // 3. Reset AI fields
                 modalGroupName.innerText = "N/A";
                 modalGroupMass.innerText = "N/A";
                 modalGroupInfoText.innerText = "Click the button to get AI-powered info.";
                 
-                // 4. Set up button for API call
                 modalGroupInfoBtn.disabled = false;
                 modalGroupInfoBtn.innerText = "Get AI Info (Name, Mass)";
-                modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomList); // Store atoms for the call
+                modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomList);
                 
                 groupInfoModal.classList.remove('hidden');
             }
@@ -718,7 +718,7 @@
                 }
             });
 
-            // --- Backend Prediction Logic (V4) ---
+            // --- Backend Prediction Logic (Grid System) ---
             const BACKEND_URL = "./api/predict_bonds";
 
             async function callBackendToPredictBonds() {
@@ -726,44 +726,31 @@
                 bonds = [];
                 setLoading(true);
 
+                if (groups.length === 0) {
+                    showMessage("You must draw a group box (purple) around atoms to predict bonds.");
+                    setLoading(false);
+                    return;
+                }
+
                 let predictionRequests = [];
 
-                if (groups.length === 0) {
-                    // --- Fallback: No groups, predict all atoms ---
-                    if (atoms.length < 2) {
-                        showMessage("Place at least 2 atoms or group them to predict bonds.");
-                        setLoading(false);
-                        return;
+                groups.forEach(group => {
+                    const atomsInGroup = getAtomsInGroup(group);
+                    
+                    if (atomsInGroup.length >= 2) {
+                        const atomList = atomsInGroup.map(atom => atom.element);
+                        const atomIdMap = atomsInGroup.map(atom => atom.id); // Map local index -> global ID
+                        predictionRequests.push(runPrediction(atomList, atomIdMap));
                     }
-                    const atomList = atoms.map(atom => atom.element);
-                    const atomIdMap = atoms.map(atom => atom.id); // Map local index -> global ID
-                    predictionRequests.push(runPrediction(atomList, atomIdMap));
+                });
 
-                } else {
-                    // --- New Logic: Run prediction for each group ---
-                    groups.forEach(group => {
-                        // Find atoms within this group
-                        const atomsInGroup = atoms.filter(atom => 
-                            atom.x >= group.x && atom.x <= group.x + group.w &&
-                            atom.y >= group.y && atom.y <= group.h
-                        );
-                        
-                        if (atomsInGroup.length >= 2) {
-                            const atomList = atomsInGroup.map(atom => atom.element);
-                            const atomIdMap = atomsInGroup.map(atom => atom.id); // Map local index -> global ID
-                            predictionRequests.push(runPrediction(atomList, atomIdMap));
-                        }
-                    });
-
-                    if (predictionRequests.length === 0) {
-                        showMessage("No groups found containing 2 or more atoms.");
-                        setLoading(false);
-                        return;
-                    }
+                if (predictionRequests.length === 0) {
+                    showMessage("No groups found containing 2 or more atoms.");
+                    setLoading(false);
+                    return;
                 }
 
                 try {
-                    // Wait for all group predictions to finish
                     await Promise.all(predictionRequests);
                     showMessage("Bonds predicted!", false);
                 } catch (error) {
@@ -771,12 +758,11 @@
                     showMessage("One or more predictions failed: " + error.message);
                 } finally {
                     setLoading(false);
-                    drawCanvas(); // Draw all new bonds at the end
+                    drawCanvas();
                 }
             }
             
             async function runPrediction(atomList, atomIdMap) {
-                // This helper function calls the API for a single group
                 const payload = { atoms: atomList };
                 
                 const response = await fetch(BACKEND_URL, {
@@ -791,25 +777,18 @@
                 }
                 
                 const prediction = await response.json();
-                // Pass the prediction AND the translator map to applyPredictions
                 applyPredictions(prediction, atomIdMap);
             }
 
             function applyPredictions(prediction, atomIdMap) {
-                // This function is now just a translator.
-                // It NO LONGER clears the bonds.
                 if (!prediction.bonds) return;
 
                 prediction.bonds.forEach(bond => {
-                    // 1. Get local indices from AI (e.g., 0, 1)
                     const local_idx_1 = bond.from;
                     const local_idx_2 = bond.to;
-
-                    // 2. Translate to global atom IDs using the map (e.g., 14, 15)
                     const id1 = atomIdMap[local_idx_1];
                     const id2 = atomIdMap[local_idx_2];
                     
-                    // 3. Add the bond to the global list
                     if (id1 !== undefined && id2 !== undefined) {
                         const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
                         if (!bondExists) {
@@ -817,19 +796,43 @@
                         }
                     }
                 });
-                // We don't draw here; callBackendToPredictBonds will draw once all are done.
             }
 
             // --- Canvas Event Listeners ---
             canvas.addEventListener('mousedown', handleStart);
             canvas.addEventListener('mousemove', handleMove);
             canvas.addEventListener('mouseup', handleEnd);
-            canvas.addEventListener('mouseleave', handleEnd);
-            canvas.addEventListener('touchstart', handleStart);
-            canvas.addEventListener('touchmove', handleMove);
-            canvas.addEventListener('touchend', handleEnd);
-            canvas.addEventListener('touchcancel', handleEnd);
-            canvas.addEventListener('wheel', handleWheel);
+            canvas.addEventListener('mouseleave', () => {
+                isMouseOnCanvas = false;
+                if (isMouseDown) { // Treat as a mouseup
+                    handleEnd(new MouseEvent('mouseup'));
+                }
+                drawCanvas();
+            });
+            canvas.addEventListener('mouseenter', () => {
+                isMouseOnCanvas = true;
+                drawCanvas();
+            });
+            
+            // Touch events mapped to grid logic
+            canvas.addEventListener('touchstart', (e) => {
+                isMouseOnCanvas = true;
+                handleStart(e);
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                isMouseOnCanvas = true;
+                handleMove(e);
+            });
+            canvas.addEventListener('touchend', (e) => {
+                isMouseOnCanvas = false;
+                handleEnd(e);
+            });
+            canvas.addEventListener('touchcancel', (e) => {
+                isMouseOnCanvas = false;
+                handleEnd(e);
+                isMouseDown = false;
+            });
+
             canvas.addEventListener('contextmenu', e => e.preventDefault());
 
             // --- Initial Load ---
