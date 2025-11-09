@@ -536,7 +536,7 @@
                     }
 
                     const group = getGroupAt(row, col);
-                    console.log("Info click on blank cell. Found group:", group);
+                    
                     if (group) {
                         deleteGroup(group);
                         revertToInfoTool();
@@ -560,6 +560,7 @@
                         isMouseDown = false; 
                         return;
                     }
+                    console.log("Info click on blank cell. Found group:", group);
                     const group = getGroupAt(row, col);
                     if (group) {
                         openGroupInfoModal(group);
