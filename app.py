@@ -242,10 +242,10 @@ def get_molecule_info():
     
     atom_list = data['atoms'] # This is a list of objects
     
-    # === BUG FIX HERE ===
+    # === THIS IS THE FIX ===
     # We must extract the symbols from the objects before counting
     atom_symbols = [atom.get('element', 'X') for atom in atom_list]
-    # ====================
+    # =======================
 
     # Calculate chemical formula to help the AI
     atom_counts = Counter(atom_symbols) # Now this counts symbols (e.g., 'C', 'H')
