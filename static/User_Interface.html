@@ -350,30 +350,45 @@
                     const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
                     const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
 
-                    if (isAtomTool) {
-                        // Draw a ghost atom
-                        ctx.globalAlpha = 0.5;
-                        const color = ATOM_COLORS[activeTool] || ATOM_COLORS.DEFAULT;
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
-                        ctx.fillStyle = color;
-                        ctx.fill();
-                        
-                        ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
-                        ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(activeTool, pos.x, pos.y);
-                        ctx.globalAlpha = 1.0;
-                    } else {
-                        // Draw a simple box cursor for other tools
-                        ctx.strokeStyle = '#333333';
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(currentGridPos.col * GRID_SIZE, currentGridPos.row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-                    }
+                if (isAtomTool) {
+                    // Draw a ghost atom
+                    ctx.globalAlpha = 0.5;
+                    const color = ATOM_COLORS[activeTool] || ATOM_COLORS.DEFAULT;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    
+                    ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
+                    ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(activeTool, pos.x, pos.y);
+                    ctx.globalAlpha = 1.0;
+
+                } else if (activeTool === 'erase') { // <-- This is the fix
+                    // Draw a red 'X' cursor
+                    const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
+                    ctx.strokeStyle = '#FF0D0D'; // Red
+                    ctx.lineWidth = 4;
+                    ctx.globalAlpha = 0.8;
+                    const offset = GRID_SIZE * 0.3; // Size of the 'X'
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x - offset, pos.y - offset);
+                    ctx.lineTo(pos.x + offset, pos.y + offset);
+                    ctx.moveTo(pos.x + offset, pos.y - offset);
+                    ctx.lineTo(pos.x - offset, pos.y + offset);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+                    
+                } else {
+                    // Draw a simple box cursor for other tools
+                    ctx.strokeStyle = '#333333';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(currentGridPos.col * GRID_SIZE, currentGridPos.row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                 }
             }
-            
+            }
             // --- UI Helpers ---
             function setLoading(isLoading) { loadingSpinner.classList.toggle('hidden', !isLoading); }
             function showMessage(text, isError = true) {
@@ -394,6 +409,32 @@
             function handleStart(evt) {
                 evt.preventDefault();
                 isMouseDown = true;
+                if (activeTool === 'erase') {
+                    isMouseDown = false; // Don't start a drag
+                    const { row, col } = getMouseGridPos(evt);
+
+                    // Try to delete an atom first
+                    const atom = getAtomAt(row, col);
+                    if (atom) {
+                        deleteAtom(atom.id);
+                        revertToInfoTool();
+                        drawCanvas();
+                        return;
+                    }
+
+                    // If no atom, try to delete a group
+                    const group = getGroupAt(row, col);
+                    if (group) {
+                        deleteGroup(group);
+                        revertToInfoTool();
+                        drawCanvas();
+                        return;
+                    }
+
+                    // If user clicked empty space, just revert the tool
+                    revertToInfoTool();
+                    return;
+                }
                 const { row, col } = getMouseGridPos(evt);
                 currentGridPos = { row, col };
                 dragStartPos = { row, col };
@@ -489,17 +530,26 @@
                         activeTool = 'group';
                     } else {
                         // Handle predict/clear
+                        // --- REPLACE WITH THIS ---
+                        if (btn.id === 'tool-clear') {
+                            if (activeTool === 'erase') {
+                                // "Double click" logic: Clear everything
+                                atoms = []; bonds = []; groups = []; nextAtomId = 0;
+                                drawCanvas();
+                                revertToInfoTool(); // Revert to info tool
+                            } else {
+                                // First click: Activate erase mode
+                                activeTool = 'erase';
+                            }
+                            return; // Stop here for the clear tool
+                        }
+
                         if (btn.id === 'tool-predict') {
                             callBackendToPredictBonds();
-                        } else if (btn.id === 'tool-clear') {
-                            atoms = [];
-                            bonds = [];
-                            groups = [];
-                            nextAtomId = 0;
-                            drawCanvas();
+                            // De-select action buttons after click
+                            setTimeout(() => btn.classList.remove('active'), 100);
                         }
-                        // De-select action buttons after click
-                        setTimeout(() => btn.classList.remove('active'), 100);
+                        // --- END OF REPLACEMENT ---
                     }
                 });
             });
@@ -611,7 +661,28 @@
                     button.innerText = "Try Again";
                 }
             });
+            function getAtomAt(row, col) {
+                return atoms.find(a => a.row === row && a.col === col);
+            }
+            function deleteAtom(atomId) {
+                atoms = atoms.filter(a => a.id !== atomId);
+                // Also remove any bonds connected to this atom
+                bonds = bonds.filter(b => b.atom1_id !== atomId && b.atom2_id !== atomId);
+            }
+            function deleteGroup(group) {
+                // Filter out the group. Since groups are objects, we check coordinates
+                groups = groups.filter(g => 
+                    g.x !== group.x || g.y !== group.y || g.w !== group.w || g.h !== group.h
+                );
+            }
+            function revertToInfoTool() {
+                activeTool = 'info';
+                const clearBtn = document.getElementById('tool-clear');
+                if (clearBtn) clearBtn.classList.remove('active');
 
+                const infoBtn = document.getElementById('tool-info');
+                if (infoBtn) infoBtn.classList.add('active');
+            }
             // --- Group Info Modal Logic ---
             function getGroupAt(row, col) {
                 // Find in reverse so we get the top-most group
@@ -740,7 +811,7 @@
                     if (atomsInGroup.length >= 2) {
                         const atomList = atomsInGroup.map(atom => atom.element);
                         const atomIdMap = atomsInGroup.map(atom => atom.id); // Map local index -> global ID
-                        predictionRequests.push(runPrediction(atomList, atomIdMap));
+                        predictionRequests.push(runPrediction(atomsInGroup, atomIdMap));
                     }
                 });
 
@@ -762,8 +833,8 @@
                 }
             }
             
-            async function runPrediction(atomList, atomIdMap) {
-                const payload = { atoms: atomList };
+            async function runPrediction(atomsInGroup, atomIdMap) {
+                const payload = { atoms: atomsInGroup };
                 
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',

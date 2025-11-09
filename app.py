@@ -25,11 +25,12 @@ CORS(app)
 # Model 1: JSON/Chemistry Predictions
 CHEMISTRY_PROMPT = """
 You are a chemistry expert. A user will provide a list of atoms.
+Each atom will have an 'element' and its grid 'row' and 'col'.
 Your task is to predict ALL chemical bonds for the most likely stable structure.
-You must account for every atom in the list.
+Use the spatial information (row, col) to inform your predictions: atoms that are closer together are much more likely to be bonded.
 Respond *only* with a JSON object that adheres to the provided schema.
 Do not include any other text or markdown formatting.
-The 'from' and 'to' fields in the bonds should be 0-based indices
+The 'from' and 'to' fields in the bonds MUST be 0-based indices
 corresponding to the user's input atom list.
 
 Example user query: "Predict all bonds for the molecule CH4, based on this 0-indexed atom list: ['C', 'H', 'H', 'H', 'H']"
@@ -117,9 +118,43 @@ def handle_predict_bonds():
     data = request.get_json()
     if not data or 'atoms' not in data:
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
-    atom_list = data['atoms']
+    
+    atom_list = data['atoms'] # This is now a list of objects
+    
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
+    
+    # --- THIS IS THE FIX ---
+    # Get just the element symbols from the list of objects
+    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
+    
+    # Build chemical formula to help AI
+    atom_counts = Counter(atom_symbols) # Count the symbols, not the objects
+    # --- END OF FIX ---
+    
+    formula = ""
+    if 'C' in atom_counts:
+        count = atom_counts.pop('C')
+        formula += f"C{count if count > 1 else ''}"
+    if 'H' in atom_counts:
+        count = atom_counts.pop('H')
+        formula += f"H{count if count > 1 else ''}"
+    for element in sorted(atom_counts.keys()):
+        count = atom_counts[element]
+        formula += f"{element}{count if count > 1 else ''}"
+
+    # Send the FULL atom_list (with coordinates) to the AI
+    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list with grid coordinates: {str(atom_list)}"
+    try:
+        response = json_model.generate_content(
+            user_query,
+            generation_config=json_generation_config
+        )
+        predicted_json_text = response.candidates[0].content.parts[0].text
+        return jsonify(json.loads(predicted_json_text))
+    except Exception as e:
+        print(f"An error occurred calling the Gemini API for bonds: {e}")
+        return jsonify({"error": f"AI prediction failed: {e}"}), 500
     
     # Build chemical formula to help AI
     atom_counts = Counter(atom_list)
@@ -134,7 +169,7 @@ def handle_predict_bonds():
         count = atom_counts[element]
         formula += f"{element}{count if count > 1 else ''}"
 
-    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
+    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list with grid coordinates: {str(atom_list)}"
     try:
         response = json_model.generate_content(
             user_query,
@@ -174,9 +209,9 @@ def get_molecule_info():
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
     
     atom_list = data['atoms']
-    
+    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
     # Calculate chemical formula to help the AI
-    atom_counts = Counter(atom_list)
+    atom_counts = Counter(atom_symbols)
     formula = ""
     if 'C' in atom_counts:
         count = atom_counts.pop('C')
