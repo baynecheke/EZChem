@@ -103,26 +103,34 @@ info_generation_config = genai.GenerationConfig(
 
 # Model 4: Structure Analysis (NEW)
 ANALYZE_PROMPT = """
-You are a chemistry expert. A user will provide a JSON object describing a molecule
+You are a meticulous chemistry expert. A user will provide a JSON object describing a molecule
 with atoms (and their IDs) and bonds (connecting atom IDs).
-Your task is to analyze this structure. Respond *only* with a JSON object.
+Your task is to analyze this structure and return a JSON object.
 
-1.  For each atom, provide its 'atom_id', 'formal_charge', and 'electrons_shared_or_given'.
-    - 'electrons_shared_or_given' should be the number of valence electrons participating in the bonds you see.
-2.  For each bond, provide its 'bond_id' and 'type' ('COVALENT' or 'IONIC').
+**YOUR ANALYSIS MUST FOLLOW THESE RULES:**
 
-Example JSON response:
-{
-  "atoms": [
-    {"atom_id": 1, "formal_charge": 0, "electrons_shared_or_given": 1},
-    {"atom_id": 2, "formal_charge": 0, "electrons_shared_or_given": 4},
-    {"atom_id": 3, "formal_charge": -1, "electrons_shared_or_given": 1}
-  ],
-  "bonds": [
-    {"bond_id": 101, "type": "COVALENT"},
-    {"bond_id": 102, "type": "IONIC"}
-  ]
-}
+**1. Bond Type Analysis (For each bond):**
+* **Rule:** A bond is 'IONIC' if it is between a metal and a non-metal.
+* **Rule:** A bond is 'COVALENT' if it is between two non-metals.
+* (Metals include: Al, Na, K, Mg, Ca, Fe. Non-metals include: C, H, O, N, Cl, F, S, P, I, Br).
+
+**2. Atom Analysis (For each atom):**
+
+* **If the atom is part of an IONIC bond (Metal + Non-metal):**
+    * `formal_charge`: This is the atom's typical ionic charge.
+        * Examples: Na is +1, Mg is +2, Al is +3.
+        * Examples: Cl is -1, O is -2, N is -3.
+    * `electrons_shared_or_given`: This is the number of electrons the atom *gives* (for metals) or *takes* (for non-metals).
+        * Example: For AlCl3, Al 'gives' 3, so its value is 3. Each Cl 'takes' 1, so its value is 1.
+        * Example: For NaCl, Na 'gives' 1, so its value is 1. Cl 'takes' 1, so its value is 1.
+
+* **If the atom is part of a COVALENT bond (Non-metal + Non-metal):**
+    * `formal_charge`: Calculate the standard formal charge based on the number of bonds (e.g., in O3, the central O with 3 bonds is +1, the single-bonded O is -1, the double-bonded O is 0).
+    * `electrons_shared_or_given`: This is the total number of electrons that atom is *sharing* in its bonds (e.g., a single bond = 2, a double bond = 4. An atom with one single and one double bond is sharing 6).
+
+* **Priority:** The IONIC rules take priority. If you see Al bonded to Cl, treat all bonds as 'IONIC' even if the user drew them as covalent.
+
+Respond *only* with a JSON object.
 """
 ANALYZE_SCHEMA = {
     "type": "OBJECT",
