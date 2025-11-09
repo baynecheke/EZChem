@@ -844,6 +844,7 @@
                 
                 // Send the full atom objects to the /get_molecule_info endpoint
                 modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomsInGroup);
+                groupInfoModal.classList.remove('hidden');
             }
 
             groupModalCloseBtn.addEventListener('click', () => groupInfoModal.classList.add('hidden'));
