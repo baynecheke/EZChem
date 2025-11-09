@@ -243,7 +243,7 @@ def get_molecule_info():
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
     
     atom_list = data['atoms']
-    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
+    atom_symbols = atom_list
     # Calculate chemical formula to help the AI
     atom_counts = Counter(atom_symbols)
     formula = ""
