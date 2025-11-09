@@ -101,13 +101,72 @@ info_generation_config = genai.GenerationConfig(
     response_schema=INFO_SCHEMA
 )
 
+# Model 4: Structure Analysis (NEW)
+ANALYZE_PROMPT = """
+You are a chemistry expert. A user will provide a JSON object describing a molecule
+with atoms (and their IDs) and bonds (connecting atom IDs).
+Your task is to analyze this structure. Respond *only* with a JSON object.
+
+1.  For each atom, provide its 'atom_id', 'formal_charge', and 'electrons_shared_or_given'.
+    - 'electrons_shared_or_given' should be the number of valence electrons participating in the bonds you see.
+2.  For each bond, provide its 'bond_id' and 'type' ('COVALENT' or 'IONIC').
+
+Example JSON response:
+{
+  "atoms": [
+    {"atom_id": 1, "formal_charge": 0, "electrons_shared_or_given": 1},
+    {"atom_id": 2, "formal_charge": 0, "electrons_shared_or_given": 4},
+    {"atom_id": 3, "formal_charge": -1, "electrons_shared_or_given": 1}
+  ],
+  "bonds": [
+    {"bond_id": 101, "type": "COVALENT"},
+    {"bond_id": 102, "type": "IONIC"}
+  ]
+}
+"""
+ANALYZE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "atoms": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "atom_id": {"type": "INTEGER"},
+                    "formal_charge": {"type": "INTEGER"},
+                    "electrons_shared_or_given": {"type": "INTEGER"}
+                },
+                "required": ["atom_id", "formal_charge", "electrons_shared_or_given"]
+            }
+        },
+        "bonds": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "bond_id": {"type": "INTEGER"},
+                    "type": {"type": "STRING"}
+                },
+                "required": ["bond_id", "type"]
+            }
+        }
+    },
+    "required": ["atoms", "bonds"]
+}
+analyze_model = genai.GenerativeModel(
+    'gemini-2.5-flash-preview-09-2025',
+    system_instruction=ANALYZE_PROMPT
+)
+analyze_generation_config = genai.GenerationConfig(
+    response_mime_type="application/json",
+    response_schema=ANALYZE_SCHEMA
+)
+
 # --- Frontend Route ---
 @app.route('/')
 def serve_frontend():
     if app.static_folder is None:
         return "Server configuration error: Static folder not found.", 500
-    # This assumes your HTML file is named User_Interface.html and is in a 'static' folder
-    # If not, adjust the 'static_folder' in app = Flask(__name__, static_folder='static')
     return send_from_directory(app.static_folder, 'User_Interface.html')
 
 # --- API Endpoint 1: Predict Bonds ---
@@ -124,13 +183,11 @@ def handle_predict_bonds():
     if len(atom_list) < 2:
         return jsonify({"error": "At least 2 atoms are required"}), 400
     
-    # --- THIS IS THE FIX ---
     # Get just the element symbols from the list of objects
     atom_symbols = [atom.get('element', 'X') for atom in atom_list]
     
     # Build chemical formula to help AI
     atom_counts = Counter(atom_symbols) # Count the symbols, not the objects
-    # --- END OF FIX ---
     
     formula = ""
     if 'C' in atom_counts:
@@ -156,30 +213,7 @@ def handle_predict_bonds():
         print(f"An error occurred calling the Gemini API for bonds: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
     
-    # Build chemical formula to help AI
-    atom_counts = Counter(atom_list)
-    formula = ""
-    if 'C' in atom_counts:
-        count = atom_counts.pop('C')
-        formula += f"C{count if count > 1 else ''}"
-    if 'H' in atom_counts:
-        count = atom_counts.pop('H')
-        formula += f"H{count if count > 1 else ''}"
-    for element in sorted(atom_counts.keys()):
-        count = atom_counts[element]
-        formula += f"{element}{count if count > 1 else ''}"
-
-    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list with grid coordinates: {str(atom_list)}"
-    try:
-        response = json_model.generate_content(
-            user_query,
-            generation_config=json_generation_config
-        )
-        predicted_json_text = response.candidates[0].content.parts[0].text
-        return jsonify(json.loads(predicted_json_text))
-    except Exception as e:
-        print(f"An error occurred calling the Gemini API for bonds: {e}")
-        return jsonify({"error": f"AI prediction failed: {e}"}), 500
+    # *** DEBUG: Removed duplicated/unreachable code block from here ***
 
 # --- API Endpoint 2: Get Fun Fact ---
 @app.route('/api/get_fun_fact', methods=['POST'])
@@ -228,7 +262,6 @@ def get_molecule_info():
     try:
         response = info_model.generate_content(user_query, generation_config=info_generation_config )
         
-        # **This is the fix from our previous conversation**
         info_text = response.candidates[0].content.parts[0].text
         return jsonify(json.loads(info_text))
         
@@ -236,9 +269,36 @@ def get_molecule_info():
         print(f"An error occurred calling the Gemini API for info: {e}")
         return jsonify({"error": f"AI info generation failed: {e}"}), 500
 
+# --- API Endpoint 4: Analyze Structure (NEW) ---
+@app.route('/api/analyze_structure', methods=['POST'])
+def analyze_structure():
+    if not API_KEY:
+        return jsonify({"error": "Server is missing GEMINI_API_KEY"}), 500
+    data = request.get_json()
+    if not data or 'atoms' not in data or 'bonds' not in data:
+        return jsonify({"error": "Invalid request: 'atoms' and 'bonds' lists missing"}), 400
+    
+    atom_list = data['atoms']
+    # bond_list = data['bonds'] # We just pass the whole 'data' to the AI
+
+    if not atom_list:
+         return jsonify({"error": "No atoms to analyze"}), 400
+
+    user_query = f"Analyze this molecule structure: {json.dumps(data)}"
+
+    try:
+        response = analyze_model.generate_content(
+            user_query, 
+            generation_config=analyze_generation_config 
+        )
+        analysis_text = response.candidates[0].content.parts[0].text
+        return jsonify(json.loads(analysis_text))
+        
+    except Exception as e:
+        print(f"An error occurred calling the Gemini API for analysis: {e}")
+        return jsonify({"error": f"AI analysis failed: {e}"}), 500
 
 # --- Run the Server ---
 if __name__ == '__main__':
     print("Starting Python Flask server for molecule prediction...")
-    # Make sure the 'static' folder exists and User_Interface.html is inside it.
     app.run(port=5000, debug=True)

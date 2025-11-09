@@ -13,7 +13,6 @@
         }
         canvas {
             touch-action: none;
-            /* No cursor, we will draw our own */
             cursor: none; 
             display: block;
             background-color: #ffffff;
@@ -30,9 +29,14 @@
 </head>
 <body class="h-full flex flex-col antialiased">
 
-    <!-- Header Bar (Unchanged) -->
     <div class="bg-gray-800 text-white p-2 shadow-md flex items-center gap-4">
         <h1 class="text-xl font-bold text-center">EZChem</h1>
+        
+        <button id="toggle-charge-view" class="p-2 rounded-lg hover:bg-gray-700" title="Toggle Bond/Charge View">
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+        </button>
         <div class="relative flex-1 max-w-md mx-auto">
             <div class="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -47,7 +51,6 @@
 
     <div class="flex-1 flex flex-row p-4 gap-4 h-full min-h-0">
 
-        <!-- Toolbar (Unchanged) -->
         <div class="flex flex-col items-center bg-white p-2 rounded-lg shadow-lg gap-2 w-20">
             <h2 class="text-sm font-semibold text-center text-gray-600">Atoms</h2>
             
@@ -90,14 +93,12 @@
             </button>
         </div>
 
-        <!-- Canvas Area -->
         <div class="flex-1 bg-white rounded-lg shadow-lg h-full overflow-hidden">
             <canvas id="sketchpad"></canvas>
         </div>
 
     </div>
 
-    <!-- Modals (Unchanged) -->
     <div id="message-box" class="fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-xl hidden z-50">
         <span id="message-text"></span>
     </div>
@@ -191,23 +192,37 @@
             const ctx = canvas.getContext('2d');
             
             // --- Grid System Config ---
-            const GRID_SIZE = 40; // Size of each grid cell in pixels
-            const ATOM_RADIUS = GRID_SIZE * 0.4; // 40% of the cell size
+            const GRID_SIZE = 40; 
+            const ATOM_RADIUS = GRID_SIZE * 0.4; 
             const ATOM_COLORS = { 'C': '#333333', 'H': '#CCCCCC', 'O': '#FF0D0D', 'N': '#3050F8', 'DEFAULT': '#888888' };
             
             // --- App State ---
-            // Atoms and groups are now stored in GRID coordinates, not pixel coordinates
             let atoms = []; // { id, row, col, element }
-            let bonds = []; // { atom1_id, atom2_id }
+            let bonds = []; // { id, atom1_id, atom2_id, type }
             let groups = []; // { x, y, w, h } (in grid units)
             
             let activeTool = 'C'; 
             let nextAtomId = 0;
+            let nextBondId = 0; // <-- NEW
+            let isChargeViewActive = false; // <-- NEW
+            let analysisData = null; // <-- NEW (to cache AI response)
+
+            // --- Common Valence for unbonded atoms (NEW) ---
+            const COMMON_VALENCE = { 
+                'H': '+1', 'Li': '+1', 'Na': '+1', 'K': '+1',
+                'Be': '+2', 'Mg': '+2', 'Ca': '+2',
+                'B': '+3', 'Al': '+3',
+                'C': '±4',
+                'N': '-3', 'P': '-3',
+                'O': '-2', 'S': '-2',
+                'F': '-1', 'Cl': '-1', 'Br': '-1', 'I': '-1',
+                'DEFAULT': '?'
+            };
 
             // --- Mouse/Drag State ---
             let isMouseDown = false;
-            let dragStartPos = { row: 0, col: 0 }; // In grid units
-            let currentGridPos = { row: 0, col: 0 }; // In grid units
+            let dragStartPos = { row: 0, col: 0 }; 
+            let currentGridPos = { row: 0, col: 0 }; 
             let tempDragRect = null; // { x, y, w, h } (in grid units)
             let isMouseOnCanvas = false;
 
@@ -217,6 +232,7 @@
             const messageText = document.getElementById('message-text');
             const searchInput = document.getElementById('search-input');
             const searchResults = document.getElementById('search-results');
+            const chargeViewToggle = document.getElementById('toggle-charge-view'); // <-- NEW
             // Atom Modal
             const atomInfoModal = document.getElementById('atom-info-modal');
             const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -244,20 +260,14 @@
                 const rect = canvas.getBoundingClientRect();
                 const clientX = evt.clientX ?? evt.touches[0]?.clientX ?? evt.changedTouches?.[0]?.clientX;
                 const clientY = evt.clientY ?? evt.touches[0]?.clientY ?? evt.changedTouches?.[0]?.clientY;
-                
-                // Pixel position relative to canvas
                 const pixelX = clientX - rect.left;
                 const pixelY = clientY - rect.top;
-                
-                // Convert pixel position to grid position
                 const col = Math.floor(pixelX / GRID_SIZE);
                 const row = Math.floor(pixelY / GRID_SIZE);
-                
                 return { row, col };
             }
 
             function gridToPixel(row, col) {
-                // Returns the CENTER pixel of a grid cell
                 const x = (col * GRID_SIZE) + (GRID_SIZE / 2);
                 const y = (row * GRID_SIZE) + (GRID_SIZE / 2);
                 return { x, y };
@@ -267,12 +277,12 @@
                 return atoms.find(a => a.row === row && a.col === col);
             }
 
-            // --- Drawing Functions ---
+            // --- Drawing Functions (Refactored) ---
             function drawCanvas() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
                 // 1. Draw Grid Lines
-                ctx.strokeStyle = '#f0f0f0'; // Light gray
+                ctx.strokeStyle = '#f0f0f0'; 
                 ctx.lineWidth = 1;
                 for (let x = 0; x < canvas.width; x += GRID_SIZE) {
                     ctx.beginPath();
@@ -288,50 +298,25 @@
                 }
 
                 // 2. Draw Groups
-                ctx.fillStyle = 'rgba(139, 92, 246, 0.1)'; // purple-500 10%
-                ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // purple-500 50%
+                ctx.fillStyle = 'rgba(139, 92, 246, 0.1)'; 
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; 
                 ctx.lineWidth = 2;
                 groups.forEach(group => {
                     const { x, y, w, h } = normalizeRect(group.x, group.y, group.w, group.h);
-                    // Convert grid units to pixels
                     ctx.fillRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
                     ctx.strokeRect(x * GRID_SIZE, y * GRID_SIZE, w * GRID_SIZE, h * GRID_SIZE);
                 });
 
-                // 3. Draw Bonds
-                ctx.strokeStyle = '#666666';
-                ctx.lineWidth = 4;
-                bonds.forEach(bond => {
-                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
-                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
-                    if (atom1 && atom2) {
-                        const pos1 = gridToPixel(atom1.row, atom1.col);
-                        const pos2 = gridToPixel(atom2.row, atom2.col);
-                        ctx.beginPath();
-                        ctx.moveTo(pos1.x, pos1.y);
-                        ctx.lineTo(pos2.x, pos2.y);
-                        ctx.stroke();
-                    }
-                });
+                // 3. & 4. Draw Bonds and Atoms (NEW LOGIC)
+                if (isChargeViewActive) {
+                    drawChargeViewBonds();
+                    drawChargeViewAtoms();
+                } else {
+                    drawDefaultBonds();
+                    drawDefaultAtoms();
+                }
 
-                // 4. Draw Atoms
-                atoms.forEach(atom => {
-                    const pos = gridToPixel(atom.row, atom.col);
-                    const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
-                    
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                    
-                    ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
-                    ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`; // Scaled font
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(atom.element, pos.x, pos.y);
-                });
-
-                // 5. Draw Temporary Drag Box (if dragging)
+                // 5. Draw Temporary Drag Box
                 if (isMouseDown && tempDragRect) {
                     const { x, y, w, h } = normalizeRect(tempDragRect.x, tempDragRect.y, tempDragRect.w, tempDragRect.h);
                     const isGroupTool = activeTool === 'group';
@@ -350,45 +335,173 @@
                     const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
                     const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
 
-                if (isAtomTool) {
-                    // Draw a ghost atom
-                    ctx.globalAlpha = 0.5;
-                    const color = ATOM_COLORS[activeTool] || ATOM_COLORS.DEFAULT;
+                    if (isAtomTool) {
+                        ctx.globalAlpha = 0.5;
+                        const color = ATOM_COLORS[activeTool] || ATOM_COLORS.DEFAULT;
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                        
+                        ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
+                        ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(activeTool, pos.x, pos.y);
+                        ctx.globalAlpha = 1.0;
+                    } else if (activeTool === 'erase') { 
+                        const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
+                        ctx.strokeStyle = '#FF0D0D'; // Red
+                        ctx.lineWidth = 4;
+                        ctx.globalAlpha = 0.8;
+                        const offset = GRID_SIZE * 0.3; // Size of the 'X'
+                        ctx.beginPath();
+                        ctx.moveTo(pos.x - offset, pos.y - offset);
+                        ctx.lineTo(pos.x + offset, pos.y + offset);
+                        ctx.moveTo(pos.x + offset, pos.y - offset);
+                        ctx.lineTo(pos.x - offset, pos.y + offset);
+                        ctx.stroke();
+                        ctx.globalAlpha = 1.0;
+                    } else {
+                        ctx.strokeStyle = '#333333';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(currentGridPos.col * GRID_SIZE, currentGridPos.row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+                    }
+                }
+            }
+
+            function drawDefaultBonds() {
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([]); 
+                bonds.forEach(bond => {
+                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
+                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
+                    if (atom1 && atom2) {
+                        const pos1 = gridToPixel(atom1.row, atom1.col);
+                        const pos2 = gridToPixel(atom2.row, atom2.col);
+                        ctx.beginPath();
+                        ctx.moveTo(pos1.x, pos1.y);
+                        ctx.lineTo(pos2.x, pos2.y);
+                        ctx.stroke();
+                    }
+                });
+            }
+
+            function drawDefaultAtoms() {
+                atoms.forEach(atom => {
+                    const pos = gridToPixel(atom.row, atom.col);
+                    const color = ATOM_COLORS[atom.element] || ATOM_COLORS.DEFAULT;
+                    
                     ctx.beginPath();
                     ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
                     ctx.fillStyle = color;
                     ctx.fill();
                     
                     ctx.fillStyle = (color === '#333333' || color === '#3050F8') ? '#FFFFFF' : '#000000';
-                    ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
+                    ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`; 
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(activeTool, pos.x, pos.y);
-                    ctx.globalAlpha = 1.0;
+                    ctx.fillText(atom.element, pos.x, pos.y);
+                });
+            }
 
-                } else if (activeTool === 'erase') { // <-- This is the fix
-                    // Draw a red 'X' cursor
-                    const pos = gridToPixel(currentGridPos.row, currentGridPos.col);
-                    ctx.strokeStyle = '#FF0D0D'; // Red
-                    ctx.lineWidth = 4;
-                    ctx.globalAlpha = 0.8;
-                    const offset = GRID_SIZE * 0.3; // Size of the 'X'
-                    ctx.beginPath();
-                    ctx.moveTo(pos.x - offset, pos.y - offset);
-                    ctx.lineTo(pos.x + offset, pos.y + offset);
-                    ctx.moveTo(pos.x + offset, pos.y - offset);
-                    ctx.lineTo(pos.x - offset, pos.y + offset);
-                    ctx.stroke();
-                    ctx.globalAlpha = 1.0;
+            // --- NEW FUNCTION (New logic) ---
+            function drawChargeViewBonds() {
+                ctx.lineWidth = 4; // Make lines thick
+
+                bonds.forEach(bond => {
+                    const atom1 = atoms.find(a => a.id === bond.atom1_id);
+                    const atom2 = atoms.find(a => a.id === bond.atom2_id);
+                    if (!atom1 || !atom2) return;
+
+                    const pos1 = gridToPixel(atom1.row, atom1.col);
+                    const pos2 = gridToPixel(atom2.row, atom2.col);
                     
-                } else {
-                    // Draw a simple box cursor for other tools
-                    ctx.strokeStyle = '#333333';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(currentGridPos.col * GRID_SIZE, currentGridPos.row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
-                }
+                    // Find the bond's analysis info
+                    const bondInfo = analysisData?.bonds.find(b => b.bond_id === bond.id);
+                    const bondType = bondInfo?.type || 'COVALENT'; // Default to covalent
+
+                    if (bondType === 'IONIC') {
+                        ctx.strokeStyle = '#f56565'; // Red
+                        ctx.setLineDash([5, 5]); // Dotted line
+                    } else { // Covalent
+                        ctx.strokeStyle = '#4299e1'; // Blue
+                        ctx.setLineDash([]); // Solid line
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(pos1.x, pos1.y);
+                    ctx.lineTo(pos2.x, pos2.y);
+                    ctx.stroke();
+                });
+                ctx.setLineDash([]); // Reset for other drawing
             }
+
+            // --- NEW FUNCTION (New logic) ---
+            function drawChargeViewAtoms() {
+                atoms.forEach(atom => {
+                    const pos = gridToPixel(atom.row, atom.col);
+                    
+                    // Draw a simple gray circle for this view
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, ATOM_RADIUS, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#e0e0e0';
+                    ctx.fill();
+                    
+                    // --- Check if atom is bonded ---
+                    const isBonded = bonds.some(b => b.atom1_id === atom.id || b.atom2_id === atom.id);
+
+                    if (isBonded && analysisData) {
+                        // --- Atom is Bonded: Use AI Analysis Data ---
+                        const atomInfo = analysisData.atoms.find(a => a.atom_id === atom.id);
+                        
+                        // Draw element symbol
+                        ctx.fillStyle = '#333333';
+                        ctx.font = `bold ${ATOM_RADIUS * 0.9}px Inter`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(atom.element, pos.x, pos.y);
+
+                        // Draw Formal Charge
+                        const charge = atomInfo?.formal_charge;
+                        if (charge !== undefined && charge !== 0) {
+                            const chargeText = charge > 0 ? `+${charge}` : `${charge}`;
+                            const chargeX = pos.x + ATOM_RADIUS * 0.7;
+                            const chargeY = pos.y - ATOM_RADIUS * 0.7;
+                            const chargeRadius = ATOM_RADIUS * 0.4;
+                            ctx.fillStyle = charge > 0 ? '#4299e1' : '#f56565'; // blue / red
+                            ctx.beginPath();
+                            ctx.arc(chargeX, chargeY, chargeRadius, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.fillStyle = 'white';
+                            ctx.font = `bold ${chargeRadius * 1.2}px Inter`;
+                            ctx.fillText(chargeText, chargeX, chargeY);
+                        }
+
+                        // Draw Shared Electron Count
+                        const eCount = atomInfo?.electrons_shared_or_given;
+                        if (eCount !== undefined) {
+                            const eX = pos.x;
+                            const eY = pos.y + ATOM_RADIUS * 0.7; // At the bottom
+                            ctx.fillStyle = '#333';
+                            ctx.font = `italic bold ${ATOM_RADIUS * 0.5}px Inter`;
+                            ctx.fillText(`e: ${eCount}`, eX, eY);
+                        }
+
+                    } else {
+                        // --- Atom is NOT Bonded: Use Valence Lookup ---
+                        const valence = COMMON_VALENCE[atom.element] || COMMON_VALENCE.DEFAULT;
+                        
+                        ctx.fillStyle = '#777777';
+                        ctx.font = `bold ${ATOM_RADIUS * 1.2}px Inter`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(valence, pos.x, pos.y); // Draw valence charge
+                    }
+                });
             }
+
             // --- UI Helpers ---
             function setLoading(isLoading) { loadingSpinner.classList.toggle('hidden', !isLoading); }
             function showMessage(text, isError = true) {
@@ -413,7 +526,6 @@
                     isMouseDown = false; // Don't start a drag
                     const { row, col } = getMouseGridPos(evt);
 
-                    // Try to delete an atom first
                     const atom = getAtomAt(row, col);
                     if (atom) {
                         deleteAtom(atom.id);
@@ -422,7 +534,6 @@
                         return;
                     }
 
-                    // If no atom, try to delete a group
                     const group = getGroupAt(row, col);
                     if (group) {
                         deleteGroup(group);
@@ -431,7 +542,6 @@
                         return;
                     }
 
-                    // If user clicked empty space, just revert the tool
                     revertToInfoTool();
                     return;
                 }
@@ -442,24 +552,21 @@
                 const isAtomTool = !!PERIODIC_TABLE.find(el => el.s === activeTool);
 
                 if (activeTool === 'info') {
-                    // Check for atom first
                     const atom = getAtomAt(row, col);
                     if (atom) {
                         openAtomInfoModal(atom);
-                        isMouseDown = false; // Don't start a drag
+                        isMouseDown = false; 
                         return;
                     }
-                    // Check for group
                     const group = getGroupAt(row, col);
                     if (group) {
                         openGroupInfoModal(group);
                         isMouseDown = false;
                         return;
                     }
-                    return; // Do nothing if blank space
+                    return; 
                 }
                 
-                // Start a drag rectangle
                 tempDragRect = { x: col, y: row, w: 1, h: 1 };
                 drawCanvas();
             }
@@ -470,7 +577,6 @@
                 currentGridPos = { row, col };
                 
                 if (isMouseDown) {
-                    // Update the temporary drag rectangle
                     tempDragRect.w = (col - dragStartPos.col) + 1;
                     tempDragRect.h = (row - dragStartPos.row) + 1;
                 }
@@ -490,10 +596,8 @@
                     const { x, y, w, h } = normalizeRect(tempDragRect.x, tempDragRect.y, tempDragRect.w, tempDragRect.h);
 
                     if (isAtomTool) {
-                        // --- Fill Atom Logic ---
                         for (let r = y; r < y + h; r++) {
                             for (let c = x; c < x + w; c++) {
-                                // Add atom if cell is empty
                                 if (!getAtomAt(r, c)) {
                                     atoms.push({
                                         id: nextAtomId++,
@@ -505,8 +609,7 @@
                             }
                         }
                     } else if (activeTool === 'group') {
-                        // --- Add Group Logic ---
-                        if (w > 0 && h > 0) { // Only add if it's a valid rect
+                        if (w > 0 && h > 0) { 
                             groups.push({ x, y, w, h });
                         }
                     }
@@ -529,32 +632,27 @@
                     } else if (btn.id === 'tool-group') {
                         activeTool = 'group';
                     } else {
-                        // Handle predict/clear
-                        // --- REPLACE WITH THIS ---
                         if (btn.id === 'tool-clear') {
                             if (activeTool === 'erase') {
-                                // "Double click" logic: Clear everything
                                 atoms = []; bonds = []; groups = []; nextAtomId = 0;
+                                nextBondId = 0; // <-- Reset bond ID
                                 drawCanvas();
-                                revertToInfoTool(); // Revert to info tool
+                                revertToInfoTool(); 
                             } else {
-                                // First click: Activate erase mode
                                 activeTool = 'erase';
                             }
-                            return; // Stop here for the clear tool
+                            return; 
                         }
 
                         if (btn.id === 'tool-predict') {
                             callBackendToPredictBonds();
-                            // De-select action buttons after click
                             setTimeout(() => btn.classList.remove('active'), 100);
                         }
-                        // --- END OF REPLACEMENT ---
                     }
                 });
             });
 
-            // --- Search Logic (Unchanged) ---
+            // --- Search Logic ---
             function performSearch(query) {
                 if (!query) {
                     searchResults.innerHTML = '';
@@ -661,16 +759,12 @@
                     button.innerText = "Try Again";
                 }
             });
-            function getAtomAt(row, col) {
-                return atoms.find(a => a.row === row && a.col === col);
-            }
+            
             function deleteAtom(atomId) {
                 atoms = atoms.filter(a => a.id !== atomId);
-                // Also remove any bonds connected to this atom
                 bonds = bonds.filter(b => b.atom1_id !== atomId && b.atom2_id !== atomId);
             }
             function deleteGroup(group) {
-                // Filter out the group. Since groups are objects, we check coordinates
                 groups = groups.filter(g => 
                     g.x !== group.x || g.y !== group.y || g.w !== group.w || g.h !== group.h
                 );
@@ -683,18 +777,17 @@
                 const infoBtn = document.getElementById('tool-info');
                 if (infoBtn) infoBtn.classList.add('active');
             }
+            
             // --- Group Info Modal Logic ---
             function getGroupAt(row, col) {
-                // Find in reverse so we get the top-most group
                 for (let i = groups.length - 1; i >= 0; i--) {
                     const group = groups[i];
                     const { x, y, w, h } = normalizeRect(group.x, group.y, group.w, group.h);
-                    // Check if click is inside the group box (grid units)
                     if (col >= x && col < x + w && row >= y && row < y + h) {
-                        return group; // Return the group object
+                        return group; 
                     }
                 }
-                return null; // No group found
+                return null; 
             }
 
             function calculateFormula(atomList) {
@@ -705,7 +798,6 @@
                     return acc;
                 }, {});
 
-                // Format: C, then H, then alphabetical
                 let formula = "";
                 if (counts.C) {
                     formula += `C${counts.C > 1 ? counts.C : ''}`;
@@ -733,27 +825,32 @@
 
             function openGroupInfoModal(group) {
                 const atomsInGroup = getAtomsInGroup(group);
-                const atomList = atomsInGroup.map(atom => atom.element);
                 
-                modalGroupFormula.innerText = calculateFormula(atomList);
+                // *** DEBUG: Pass the FULL atom objects, not just symbols ***
+                const atomDataForModal = atomsInGroup.map(atom => ({ element: atom.element, row: atom.row, col: atom.col }));
+                const atomListForFormula = atomsInGroup.map(atom => atom.element);
+
+                modalGroupFormula.innerText = calculateFormula(atomListForFormula);
                 modalGroupName.innerText = "N/A";
                 modalGroupMass.innerText = "N/A";
                 modalGroupInfoText.innerText = "Click the button to get AI-powered info.";
                 
                 modalGroupInfoBtn.disabled = false;
                 modalGroupInfoBtn.innerText = "Get AI Info (Name, Mass)";
-                modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomList);
                 
-                groupInfoModal.classList.remove('hidden');
+                // Send the full atom objects to the /get_molecule_info endpoint
+                modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomsInGroup);
             }
 
             groupModalCloseBtn.addEventListener('click', () => groupInfoModal.classList.add('hidden'));
 
             modalGroupInfoBtn.addEventListener('click', async (e) => {
                 const button = e.target;
-                const atomList = JSON.parse(button.dataset.atoms);
+                
+                // *** DEBUG: This now receives the full atom objects ***
+                const atomsForAI = JSON.parse(button.dataset.atoms);
 
-                if (atomList.length === 0) {
+                if (atomsForAI.length === 0) {
                     modalGroupInfoText.innerText = "No atoms in this group to analyze.";
                     return;
                 }
@@ -766,7 +863,7 @@
                     const response = await fetch('./api/get_molecule_info', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ atoms: atomList })
+                        body: JSON.stringify({ atoms: atomsForAI }) // Send the full objects
                     });
 
                     if (!response.ok) {
@@ -789,12 +886,12 @@
                 }
             });
 
-            // --- Backend Prediction Logic (Grid System) ---
+            // --- Backend Prediction Logic ---
             const BACKEND_URL = "./api/predict_bonds";
 
             async function callBackendToPredictBonds() {
-                // 1. Clear all existing bonds
-                bonds = [];
+                bonds = []; // Clear all existing bonds
+                nextBondId = 0; // Reset bond IDs
                 setLoading(true);
 
                 if (groups.length === 0) {
@@ -809,7 +906,6 @@
                     const atomsInGroup = getAtomsInGroup(group);
                     
                     if (atomsInGroup.length >= 2) {
-                        const atomList = atomsInGroup.map(atom => atom.element);
                         const atomIdMap = atomsInGroup.map(atom => atom.id); // Map local index -> global ID
                         predictionRequests.push(runPrediction(atomsInGroup, atomIdMap));
                     }
@@ -851,6 +947,7 @@
                 applyPredictions(prediction, atomIdMap);
             }
 
+            // --- UPDATED applyPredictions ---
             function applyPredictions(prediction, atomIdMap) {
                 if (!prediction.bonds) return;
 
@@ -863,7 +960,13 @@
                     if (id1 !== undefined && id2 !== undefined) {
                         const bondExists = bonds.some(b => (b.atom1_id === id1 && b.atom2_id === id2) || (b.atom1_id === id2 && b.atom2_id === id1));
                         if (!bondExists) {
-                            bonds.push({ atom1_id: id1, atom2_id: id2, type: bond.type || "SINGLE" });
+                            // === ADD A UNIQUE ID TO THE BOND ===
+                            bonds.push({ 
+                                id: nextBondId++, // <-- NEW
+                                atom1_id: id1, 
+                                atom2_id: id2, 
+                                type: bond.type || "SINGLE"
+                            });
                         }
                     }
                 });
@@ -875,7 +978,7 @@
             canvas.addEventListener('mouseup', handleEnd);
             canvas.addEventListener('mouseleave', () => {
                 isMouseOnCanvas = false;
-                if (isMouseDown) { // Treat as a mouseup
+                if (isMouseDown) { 
                     handleEnd(new MouseEvent('mouseup'));
                 }
                 drawCanvas();
@@ -885,7 +988,6 @@
                 drawCanvas();
             });
             
-            // Touch events mapped to grid logic
             canvas.addEventListener('touchstart', (e) => {
                 isMouseOnCanvas = true;
                 handleStart(e);
@@ -905,6 +1007,50 @@
             });
 
             canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+            // --- NEW: Charge View Toggle Listener ---
+            chargeViewToggle.addEventListener('click', async () => { 
+                isChargeViewActive = !isChargeViewActive; 
+                chargeViewToggle.classList.toggle('bg-indigo-600', isChargeViewActive);
+                chargeViewToggle.classList.toggle('hover:bg-gray-700', !isChargeViewActive);
+
+
+                if (isChargeViewActive) {
+                    // --- Call our new AI Endpoint ---
+                    chargeViewToggle.disabled = true;
+                    setLoading(true); // Show main spinner
+                    try {
+                        // Send the current atoms and bonds to be analyzed
+                        const response = await fetch('./api/analyze_structure', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ atoms, bonds })
+                        });
+
+                        if (!response.ok) {
+                            const err = await response.json();
+                            throw new Error(err.error || 'Analysis failed');
+                        }
+                        
+                        analysisData = await response.json(); // <-- Store the result
+                        
+                    } catch (error) {
+                        console.error("Analysis Error:", error);
+                        showMessage(`AI Analysis Failed: ${error.message}`);
+                        analysisData = null; // Clear bad data
+                        isChargeViewActive = false; // Turn view off
+                        chargeViewToggle.classList.remove('bg-indigo-600');
+                        chargeViewToggle.classList.add('hover:bg-gray-700');
+                    } finally {
+                        chargeViewToggle.disabled = false;
+                        setLoading(false);
+                        drawCanvas(); // Redraw canvas with new data (or lack thereof)
+                    }
+                } else {
+                    analysisData = null; // Clear the cache when turning off
+                    drawCanvas(); // Redraw in default view
+                }
+            });
 
             // --- Initial Load ---
             window.addEventListener('resize', resizeCanvas);
