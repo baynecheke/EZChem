@@ -560,8 +560,9 @@
                         isMouseDown = false; 
                         return;
                     }
-                    console.log("Info click on blank cell. Found group:", group);
+                    
                     const group = getGroupAt(row, col);
+                    console.log("Info click on blank cell. Found group:", group);
                     if (group) {
                         openGroupInfoModal(group);
                         isMouseDown = false;
