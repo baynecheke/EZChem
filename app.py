@@ -213,8 +213,6 @@ def handle_predict_bonds():
         print(f"An error occurred calling the Gemini API for bonds: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
     
-    # *** DEBUG: Removed duplicated/unreachable code block from here ***
-
 # --- API Endpoint 2: Get Fun Fact ---
 @app.route('/api/get_fun_fact', methods=['POST'])
 def get_fun_fact():
@@ -242,10 +240,15 @@ def get_molecule_info():
     if not data or 'atoms' not in data:
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
     
-    atom_list = data['atoms']
-    atom_symbols = atom_list
+    atom_list = data['atoms'] # This is a list of objects
+    
+    # === BUG FIX HERE ===
+    # We must extract the symbols from the objects before counting
+    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
+    # ====================
+
     # Calculate chemical formula to help the AI
-    atom_counts = Counter(atom_symbols)
+    atom_counts = Counter(atom_symbols) # Now this counts symbols (e.g., 'C', 'H')
     formula = ""
     if 'C' in atom_counts:
         count = atom_counts.pop('C')
@@ -257,6 +260,7 @@ def get_molecule_info():
         count = atom_counts[element]
         formula += f"{element}{count if count > 1 else ''}"
 
+    # Send the original list of atom *objects* to the AI
     user_query = f"Analyze the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
 
     try:
@@ -279,7 +283,6 @@ def analyze_structure():
         return jsonify({"error": "Invalid request: 'atoms' and 'bonds' lists missing"}), 400
     
     atom_list = data['atoms']
-    # bond_list = data['bonds'] # We just pass the whole 'data' to the AI
 
     if not atom_list:
          return jsonify({"error": "No atoms to analyze"}), 400
