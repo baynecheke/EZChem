@@ -520,6 +520,7 @@
 
             // --- Event Handlers (Grid System) ---
             function handleStart(evt) {
+                
                 evt.preventDefault();
                 isMouseDown = true;
                 if (activeTool === 'erase') {
@@ -535,6 +536,7 @@
                     }
 
                     const group = getGroupAt(row, col);
+                    console.log("Info click on blank cell. Found group:", group);
                     if (group) {
                         deleteGroup(group);
                         revertToInfoTool();
