@@ -156,7 +156,7 @@ def handle_predict_bonds():
         print(f"An error occurred calling the Gemini API for bonds: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
     
-
+@app.route('/api/get_fun_fact', methods=['POST']) # <-- ADD THIS LINE
 def get_fun_fact():
     if not API_KEY:
         return jsonify({"error": "Server is missing GEMINI_API_KEY"}), 500
