@@ -156,33 +156,7 @@ def handle_predict_bonds():
         print(f"An error occurred calling the Gemini API for bonds: {e}")
         return jsonify({"error": f"AI prediction failed: {e}"}), 500
     
-    # Build chemical formula to help AI
-    atom_counts = Counter(atom_list)
-    formula = ""
-    if 'C' in atom_counts:
-        count = atom_counts.pop('C')
-        formula += f"C{count if count > 1 else ''}"
-    if 'H' in atom_counts:
-        count = atom_counts.pop('H')
-        formula += f"H{count if count > 1 else ''}"
-    for element in sorted(atom_counts.keys()):
-        count = atom_counts[element]
-        formula += f"{element}{count if count > 1 else ''}"
 
-    user_query = f"Predict all bonds for the molecule {formula}, based on this 0-indexed atom list with grid coordinates: {str(atom_list)}"
-    try:
-        response = json_model.generate_content(
-            user_query,
-            generation_config=json_generation_config
-        )
-        predicted_json_text = response.candidates[0].content.parts[0].text
-        return jsonify(json.loads(predicted_json_text))
-    except Exception as e:
-        print(f"An error occurred calling the Gemini API for bonds: {e}")
-        return jsonify({"error": f"AI prediction failed: {e}"}), 500
-
-# --- API Endpoint 2: Get Fun Fact ---
-@app.route('/api/get_fun_fact', methods=['POST'])
 def get_fun_fact():
     if not API_KEY:
         return jsonify({"error": "Server is missing GEMINI_API_KEY"}), 500
@@ -209,7 +183,7 @@ def get_molecule_info():
         return jsonify({"error": "Invalid request: 'atoms' list missing"}), 400
     
     atom_list = data['atoms']
-    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
+    atom_symbols = atom_list
     # Calculate chemical formula to help the AI
     atom_counts = Counter(atom_symbols)
     formula = ""
