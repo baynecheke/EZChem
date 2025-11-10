@@ -1,8 +1,8 @@
 import os
 import json
-import google.generativeai as genai
+import google.generativeai as genai # type: ignore
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS # type: ignore
 from collections import Counter
 
 # --- Configuration ---
@@ -48,7 +48,7 @@ most stable, *chemically-valid* molecule.
 Respond *only* with a JSON object.
 """
 json_model = genai.GenerativeModel(
-    'gemini-2.5-pro-preview-09-2025',
+    'gemini-2.5-pro',
     system_instruction=CHEMISTRY_PROMPT
 )
 CHEMISTRY_SCHEMA = {
