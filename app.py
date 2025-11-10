@@ -79,7 +79,7 @@ json_generation_config = genai.GenerationConfig(
 
 # Model 2: Text/Fun Facts
 text_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
-
+ 
 # Model 3: Molecule Info
 INFO_PROMPT = """
 You are a brilliant chemist and data analyst. A user will provide a list of atoms.
