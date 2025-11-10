@@ -82,11 +82,19 @@ text_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
  
 # Model 3: Molecule Info
 INFO_PROMPT = """
-You are a brilliant chemist and data analyst. A user will provide a list of atoms.
-Your task is to analyze this list and return structured information about the most
-likely stable molecule they form.
-If the atoms do not form a viable, well-known molecule, set 'common_name' to 'N/A' 
-but still calculate the formula and molar mass.
+You are a brilliant chemist and data analyst. A user will provide a list of
+atom objects. Your task is to analyze this list and return structured information
+about the most likely stable molecule they form.
+
+**YOUR TASKS:**
+1.  **Calculate Formula:** Based *only* on the provided atom list, determine the
+    correct, conventionally-ordered chemical formula (e.g., using the Hill
+    system: C, then H, then alphabetical. For inorganic, use standard
+    conventions like H2SO4, not H2O4S).
+2.  **Find Common Name:** Identify the common name for this molecule.
+    If it does not form a viable, well-known molecule, set 'common_name' to 'N/A'.
+3.  **Calculate Molar Mass:** Calculate the molar mass for the formula.
+
 Respond *only* with a JSON object.
 """
 INFO_SCHEMA = {
@@ -256,26 +264,13 @@ def get_molecule_info():
     
     atom_list = data['atoms'] # This is a list of objects
     
-    # === THIS IS THE FIX ===
-    # We must extract the symbols from the objects before counting
-    atom_symbols = [atom.get('element', 'X') for atom in atom_list]
-    # =======================
-
-    # Calculate chemical formula to help the AI
-    atom_counts = Counter(atom_symbols) # Now this counts symbols (e.g., 'C', 'H')
-    formula = ""
-    if 'C' in atom_counts:
-        count = atom_counts.pop('C')
-        formula += f"C{count if count > 1 else ''}"
-    if 'H' in atom_counts:
-        count = atom_counts.pop('H')
-        formula += f"H{count if count > 1 else ''}"
-    for element in sorted(atom_counts.keys()):
-        count = atom_counts[element]
-        formula += f"{element}{count if count > 1 else ''}"
-
+    # --- THIS IS THE FIX ---
+    # We no longer pre-calculate a formula, as it can be wrong
+    # (e.g., "H2O4S" instead of "H2SO4"). We will let the AI
+    # derive the correct, conventional formula from the raw atom list.
+    
     # Send the original list of atom *objects* to the AI
-    user_query = f"Analyze the molecule {formula}, based on this 0-indexed atom list: {str(atom_list)}"
+    user_query = f"Analyze the molecule formed by this 0-indexed atom list: {str(atom_list)}"
 
     try:
         response = info_model.generate_content(user_query, generation_config=info_generation_config )
