@@ -48,7 +48,7 @@ most stable, *chemically-valid* molecule.
 Respond *only* with a JSON object.
 """
 json_model = genai.GenerativeModel(
-    'gemini-2.5-flash-preview-09-2025',
+    'gemini-2.5-flash',
     system_instruction=CHEMISTRY_PROMPT
 )
 CHEMISTRY_SCHEMA = {
