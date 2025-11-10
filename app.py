@@ -24,28 +24,31 @@ CORS(app)
 
 # Model 1: JSON/Chemistry Predictions
 CHEMISTRY_PROMPT = """
-You are a chemistry expert. A user will provide a list of atoms.
-Each atom will have an 'element' and its grid 'row' and 'col'.
-Your task is to predict ALL chemical bonds for the most likely stable structure.
-Use the spatial information (row, col) to inform your predictions: atoms that are closer together are much more likely to be bonded.
-Respond *only* with a JSON object that adheres to the provided schema.
-Do not include any other text or markdown formatting.
-The 'from' and 'to' fields in the bonds MUST be 0-based indices
-corresponding to the user's input atom list.
+You are a chemistry expert and a strict rule-enforcer. A user will provide a list
+of atoms with grid coordinates. Your task is to predict ALL chemical bonds for the
+most stable, *chemically-valid* molecule.
 
-Example user query: "Predict all bonds for the molecule CH4, based on this 0-indexed atom list: ['C', 'H', 'H', 'H', 'H']"
-Example JSON response:
-{
-  "bonds": [
-    {"from": 0, "to": 1, "type": "SINGLE"},
-    {"from": 0, "to": 2, "type": "SINGLE"},
-    {"from": 0, "to": 3, "type": "SINGLE"},
-    {"from": 0, "to": 4, "type": "SINGLE"}
-  ]
-}
+**YOUR RULES (in order of importance):**
+
+1.  **VALENCE IS LAW:** You *must* strictly respect the typical valence of each atom.
+    This rule overrides all other considerations.
+    * **H, F, Cl, Br, I:** MUST have exactly 1 bond.
+    * **O, S:** SHOULD have 2 bonds (but can have 1, e.g., in -OH).
+    * **N, P:** SHOULD have 3 bonds (but can have 4, e.g., in NH4+).
+    * **C, Si:** MUST strive to have exactly 4 bonds.
+
+2.  **PROXIMITY IS A HINT:** Use the spatial information (row, col) as a *secondary*
+    guide. Atoms that are close are *candidates* for bonding, but *only if it
+    satisfies their valence (Rule 1)*.
+
+3.  **NO IMPOSSIBLE BONDS:** It is better to leave an atom unbonded than to give it
+    more bonds than its valence allows (e.g., *never* give H 2 bonds or C 5 bonds).
+    Prioritize forming C-C skeletons first.
+
+Respond *only* with a JSON object.
 """
 json_model = genai.GenerativeModel(
-    'gemini-2.5-flash-preview-09-2025',
+    'gemini-2.5-pro-preview-09-2025',
     system_instruction=CHEMISTRY_PROMPT
 )
 CHEMISTRY_SCHEMA = {
@@ -58,7 +61,10 @@ CHEMISTRY_SCHEMA = {
                 "properties": {
                     "from": {"type": "INTEGER"},
                     "to": {"type": "INTEGER"},
-                    "type": {"type": "STRING"}
+                    "type": {
+                        "type": "STRING",
+                        "enum": ["SINGLE", "DOUBLE", "TRIPLE", "IONIC"]
+                    }
                 },
                 "required": ["from", "to", "type"]
             }
