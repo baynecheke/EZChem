@@ -530,7 +530,6 @@
                     const atom = getAtomAt(row, col);
                     if (atom) {
                         deleteAtom(atom.id);
-                        revertToInfoTool();
                         drawCanvas();
                         return;
                     }
