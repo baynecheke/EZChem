@@ -147,11 +147,12 @@
                 <p><strong>Molar Mass:</strong> <span id="modal-group-mass">N/A</span></p>
             </div>
             <div class="mt-4 pt-4 border-t">
+                <h3 class="font-semibold mb-2">Fun Fact</h3>
                 <div id="modal-group-info-box" class="bg-gray-100 p-3 rounded-lg min-h-[4rem] text-gray-700 italic">
                     <span id="modal-group-info-text">Click the button to get AI-powered info.</span>
                 </div>
                 <button id="modal-group-info-btn" class="w-full bg-indigo-600 text-white p-2 rounded-lg mt-3 hover:bg-indigo-700">
-                    Get AI Info (Name, Mass)
+                    Get AI Info + Fun Fact
                 </button>
             </div>
         </div>
@@ -839,7 +840,7 @@
                 modalGroupInfoText.innerText = "Click the button to get AI-powered info.";
                 
                 modalGroupInfoBtn.disabled = false;
-                modalGroupInfoBtn.innerText = "Get AI Info (Name, Mass)";
+                modalGroupInfoBtn.innerText = "Get AI Info + Fun Fact";
                 
                 // Send the full atom objects to the /get_molecule_info endpoint
                 modalGroupInfoBtn.dataset.atoms = JSON.stringify(atomsInGroup);
@@ -879,7 +880,7 @@
                     
                     modalGroupName.innerText = data.common_name;
                     modalGroupMass.innerText = `${data.molar_mass_g_mol} g/mol`;
-                    modalGroupInfoText.innerText = "AI analysis complete!";
+                    modalGroupInfoText.innerText = data.fun_fact || "No fun fact was returned for this molecule.";
                     button.innerText = "Info Loaded!";
 
                 } catch (error) {

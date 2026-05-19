@@ -95,6 +95,9 @@ about the most likely stable molecule they form.
 2.  **Find Common Name:** Identify the common name for this molecule.
     If it does not form a viable, well-known molecule, set 'common_name' to 'N/A'.
 3.  **Calculate Molar Mass:** Calculate the molar mass for the formula.
+4.  **Write Fun Fact:** Provide one short, student-friendly fun fact about the
+    molecule, compound, or closest likely substance. If the molecule is not
+    viable or well-known, explain that in one short sentence.
 
 Respond *only* with a JSON object.
 """
@@ -103,9 +106,10 @@ INFO_SCHEMA = {
     "properties": {
         "chemical_formula": { "type": "STRING" },
         "common_name": { "type": "STRING" },
-        "molar_mass_g_mol": { "type": "NUMBER" }
+        "molar_mass_g_mol": { "type": "NUMBER" },
+        "fun_fact": { "type": "STRING" }
     },
-    "required": ["chemical_formula", "common_name", "molar_mass_g_mol"]
+    "required": ["chemical_formula", "common_name", "molar_mass_g_mol", "fun_fact"]
 }
 info_model = genai.GenerativeModel(
     GEMINI_MODEL_NAME,
