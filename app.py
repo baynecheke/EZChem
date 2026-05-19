@@ -21,6 +21,7 @@ app = Flask(__name__, static_folder='static')
 CORS(app) 
 
 # --- AI Model Setup ---
+GEMINI_MODEL_NAME = 'gemini-2.5-flash'
 
 # Model 1: JSON/Chemistry Predictions
 CHEMISTRY_PROMPT = """
@@ -48,7 +49,7 @@ most stable, *chemically-valid* molecule.
 Respond *only* with a JSON object.
 """
 json_model = genai.GenerativeModel(
-    'gemini-2.5-flash',
+    GEMINI_MODEL_NAME,
     system_instruction=CHEMISTRY_PROMPT
 )
 CHEMISTRY_SCHEMA = {
@@ -78,7 +79,7 @@ json_generation_config = genai.GenerationConfig(
 )
 
 # Model 2: Text/Fun Facts
-text_model = genai.GenerativeModel('gemini-2.5-flash-preview-09-2025')
+text_model = genai.GenerativeModel(GEMINI_MODEL_NAME)
  
 # Model 3: Molecule Info
 INFO_PROMPT = """
@@ -107,7 +108,7 @@ INFO_SCHEMA = {
     "required": ["chemical_formula", "common_name", "molar_mass_g_mol"]
 }
 info_model = genai.GenerativeModel(
-    'gemini-2.5-flash-preview-09-2025',
+    GEMINI_MODEL_NAME,
     system_instruction=INFO_PROMPT
 )
 info_generation_config = genai.GenerationConfig(
@@ -176,7 +177,7 @@ ANALYZE_SCHEMA = {
     "required": ["atoms", "bonds"]
 }
 analyze_model = genai.GenerativeModel(
-    'gemini-2.5-flash-preview-09-2025',
+    GEMINI_MODEL_NAME,
     system_instruction=ANALYZE_PROMPT
 )
 analyze_generation_config = genai.GenerationConfig(
